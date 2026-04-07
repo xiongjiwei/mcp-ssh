@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 )
@@ -45,17 +46,26 @@ func Default() *Config {
 
 func Load(path string) (*Config, error) {
 	cfg := Default()
-	_, err := toml.DecodeFile(path, cfg)
-	if err != nil {
+	if _, err := os.Stat(path); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return cfg, nil
 		}
 		return nil, err
 	}
+	_, err := toml.DecodeFile(path, cfg)
+	if err != nil {
+		return nil, err
+	}
 	return cfg, nil
 }
 
+// DefaultPath returns the default config file path under the user's home
+// directory. If the home directory cannot be determined, it falls back to a
+// relative path ".agent-sh/config.toml".
 func DefaultPath() string {
-	home, _ := os.UserHomeDir()
-	return home + "/.agent-sh/config.toml"
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".agent-sh", "config.toml")
+	}
+	return filepath.Join(home, ".agent-sh", "config.toml")
 }

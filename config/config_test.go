@@ -33,13 +33,15 @@ func TestDefault(t *testing.T) {
 func TestLoad_OverridesDefaults(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "config.toml")
-	os.WriteFile(p, []byte(`
+	if err := os.WriteFile(p, []byte(`
 [session]
 idle_timeout_minutes = 10
 [approval]
 provider = "auto_deny"
 whitelist = ["ls"]
-`), 0600)
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := config.Load(p)
 	if err != nil {
