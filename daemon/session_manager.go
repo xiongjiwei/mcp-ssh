@@ -13,6 +13,7 @@ import (
 
 // SessionInfo is a snapshot of a session for status reporting.
 type SessionInfo struct {
+	User        string
 	Host        string
 	SessionID   string
 	IdleSeconds int
@@ -59,7 +60,7 @@ func (sm *SessionManager) GetOrCreate(user, host string) (*Session, error) {
 	}
 
 	id := newID()
-	s := NewSession(host, id, conn, sm.cfg.Session.MaxOutputBytes)
+	s := NewSession(user, host, id, conn, sm.cfg.Session.MaxOutputBytes)
 	sm.sessions[host] = s
 	return s, nil
 }
@@ -104,6 +105,7 @@ func (sm *SessionManager) List() []SessionInfo {
 			state = "executing"
 		}
 		result = append(result, SessionInfo{
+			User:        s.User(),
 			Host:        s.Host(),
 			SessionID:   s.ID(),
 			IdleSeconds: int(time.Since(s.LastActivity()).Seconds()),

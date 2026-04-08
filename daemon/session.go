@@ -17,6 +17,7 @@ var exitCodeRe = regexp.MustCompile(`EXIT_CODE:(\d+)`)
 // Session wraps a single persistent SSH pipe connection.
 type Session struct {
 	id           string
+	user         string
 	host         string
 	conn         *agentssh.Connector
 	maxOutput    int
@@ -26,9 +27,10 @@ type Session struct {
 	executing    bool
 }
 
-func NewSession(host, id string, conn *agentssh.Connector, maxOutputBytes int) *Session {
+func NewSession(user, host, id string, conn *agentssh.Connector, maxOutputBytes int) *Session {
 	return &Session{
 		id:           id,
+		user:         user,
 		host:         host,
 		conn:         conn,
 		maxOutput:    maxOutputBytes,
@@ -37,6 +39,7 @@ func NewSession(host, id string, conn *agentssh.Connector, maxOutputBytes int) *
 }
 
 func (s *Session) ID() string   { return s.id }
+func (s *Session) User() string { return s.user }
 func (s *Session) Host() string { return s.host }
 
 func (s *Session) LastActivity() time.Time {

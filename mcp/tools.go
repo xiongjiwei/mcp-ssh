@@ -51,10 +51,10 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	}
 
 	// Approval check
-	allowed, approvalErr := t.gate.Check(ctx, host, sess.ID(), command)
+	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, sess.ID(), command)
 	if approvalErr != nil || !allowed {
-		t.logger.LogApprovalRequested(host, sess.ID(), command)
-		t.logger.LogApprovalDenied(host, sess.ID(), command)
+		t.logger.LogApprovalRequested(sess.User(), host, sess.ID(), command)
+		t.logger.LogApprovalDenied(sess.User(), host, sess.ID(), command)
 		return errResult("command denied by user"), nil
 	}
 
@@ -65,11 +65,11 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 
 	if execErr != nil {
 		// Execution error (timeout, session invalid) — log as exec error, not approval denial
-		t.logger.LogExec(host, sess.ID(), command, "", 1, durationMs)
+		t.logger.LogExec(sess.User(), host, sess.ID(), command, "", 1, durationMs)
 		return errResult(execErr.Error()), nil
 	}
 
-	t.logger.LogExec(host, sess.ID(), command, stdout, exitCode, durationMs)
+	t.logger.LogExec(sess.User(), host, sess.ID(), command, stdout, exitCode, durationMs)
 
 	content := []mcp.Content{
 		mcp.TextContent{Type: "text", Text: stdout},
@@ -120,8 +120,8 @@ func (t *Tools) HandleStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.Cal
 	}
 	var sb strings.Builder
 	for _, s := range infos {
-		fmt.Fprintf(&sb, "host: %-20s session_id: %-12s idle: %ds   state: %s\n",
-			s.Host, s.SessionID, s.IdleSeconds, s.State)
+		fmt.Fprintf(&sb, "%s@%-20s session_id: %-12s idle: %ds   state: %s\n",
+			s.User, s.Host, s.SessionID, s.IdleSeconds, s.State)
 	}
 	return okResult(strings.TrimRight(sb.String(), "\n")), nil
 }

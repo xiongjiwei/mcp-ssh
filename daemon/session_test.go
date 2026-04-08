@@ -19,7 +19,7 @@ func newTestSession(t *testing.T) *daemon.Session {
 	if err != nil {
 		t.Fatalf("connector: %v", err)
 	}
-	return daemon.NewSession("testhost", "test-id", conn, 1048576)
+	return daemon.NewSession("testuser", "testhost", "test-id", conn, 1048576)
 }
 
 func TestSession_SimpleExec(t *testing.T) {

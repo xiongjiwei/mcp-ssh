@@ -21,7 +21,7 @@ func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
 
 func TestLogger_Exec(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogExec("srv1", "s1", "ls /tmp", "file1\nfile2\n", 0, 42)
+	l.LogExec("alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", 0, 42)
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "CMD: ls /tmp") {
@@ -41,12 +41,15 @@ func TestLogger_Exec(t *testing.T) {
 	if ev["command"] != "ls /tmp" {
 		t.Errorf("want command=ls /tmp, got %v", ev["command"])
 	}
+	if ev["user"] != "alice" {
+		t.Errorf("want user=alice, got %v", ev["user"])
+	}
 }
 
 func TestLogger_ApprovalCycle(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogApprovalRequested("srv1", "s1", "rm -rf /")
-	l.LogApprovalDenied("srv1", "s1", "rm -rf /")
+	l.LogApprovalRequested("alice", "srv1", "s1", "rm -rf /")
+	l.LogApprovalDenied("alice", "srv1", "s1", "rm -rf /")
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "APPROVAL: DENIED") {
@@ -67,7 +70,7 @@ func TestLogger_ApprovalCycle(t *testing.T) {
 
 func TestLogger_ApprovalApproved(t *testing.T) {
 	l, buf, _ := newTestLogger(t)
-	l.LogApprovalApproved("srv1", "s1", "deploy.sh", 0, 100)
+	l.LogApprovalApproved("alice", "srv1", "s1", "deploy.sh", 0, 100)
 
 	var ev map[string]any
 	json.NewDecoder(buf).Decode(&ev)

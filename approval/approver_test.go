@@ -9,7 +9,7 @@ import (
 
 func TestAutoDenyApprover_AlwaysDenies(t *testing.T) {
 	a := approval.NewApprover("auto_deny")
-	ok, err := a.RequestApproval(context.Background(), "srv1", "rm -rf /")
+	ok, err := a.RequestApproval(context.Background(), "user", "srv1", "rm -rf /")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestAutoDenyApprover_RespectsContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled
 	// AutoDeny returns immediately regardless of ctx state — no error expected
-	_, err := a.RequestApproval(ctx, "srv1", "rm -rf /")
+	_, err := a.RequestApproval(ctx, "user", "srv1", "rm -rf /")
 	if err != nil {
 		t.Fatalf("AutoDenyApprover should not return ctx error: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestAutoDenyApprover_RespectsContextCancellation(t *testing.T) {
 
 func TestNewApprover_UnknownProvider_FallsBackToAutoDeny(t *testing.T) {
 	a := approval.NewApprover("unknown_provider")
-	ok, _ := a.RequestApproval(context.Background(), "h", "cmd")
+	ok, _ := a.RequestApproval(context.Background(), "user", "h", "cmd")
 	if ok {
 		t.Error("unknown provider should fall back to auto_deny")
 	}
