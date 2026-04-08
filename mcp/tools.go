@@ -85,8 +85,12 @@ func (t *Tools) HandleOpen(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	if err != nil {
 		return errResult("host parameter required"), nil
 	}
+	user, err := req.RequireString("user")
+	if err != nil {
+		return errResult("user parameter required"), nil
+	}
 
-	sess, err := t.sm.GetOrCreate(host)
+	sess, err := t.sm.GetOrCreate(user, host)
 	if err != nil {
 		return errResult(fmt.Sprintf("failed to connect to %s: %v", host, err)), nil
 	}
@@ -104,9 +108,6 @@ func (t *Tools) HandleClose(_ context.Context, req mcp.CallToolRequest) (*mcp.Ca
 		return okResult("closed"), nil
 	}
 
-	if t.sm.Get(host) == nil {
-		return okResult(fmt.Sprintf("no active session for %s", host)), nil
-	}
 	t.sm.Close(host)
 	return okResult("closed"), nil
 }

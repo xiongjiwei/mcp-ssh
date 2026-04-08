@@ -12,10 +12,10 @@ import (
 
 func newTestSession(t *testing.T) *daemon.Session {
 	t.Helper()
-	if _, err := exec.LookPath("sh"); err != nil {
-		t.Skip("sh not available")
+	if _, err := exec.LookPath("bash"); err != nil {
+		t.Skip("bash not available")
 	}
-	conn, err := agentssh.New("sh", "", 5*time.Second)
+	conn, err := agentssh.New("bash", "", "", 5*time.Second)
 	if err != nil {
 		t.Fatalf("connector: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestSession_ExitCodeCaptured(t *testing.T) {
 	s := newTestSession(t)
 	defer s.Close()
 
-	_, code, err := s.Exec("sh -c 'exit 3'", 10*time.Second)
+	_, code, err := s.Exec("bash -c 'exit 3'", 10*time.Second)
 	if err != nil {
 		t.Fatalf("exec: %v", err)
 	}

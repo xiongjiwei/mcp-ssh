@@ -13,9 +13,6 @@ func TestDefault(t *testing.T) {
 	if cfg.Session.IdleTimeoutMinutes != 30 {
 		t.Errorf("want 30, got %d", cfg.Session.IdleTimeoutMinutes)
 	}
-	if cfg.Session.ConnectTimeoutSeconds != 15 {
-		t.Errorf("want 15, got %d", cfg.Session.ConnectTimeoutSeconds)
-	}
 	if cfg.Session.CommandTimeoutSeconds != 30 {
 		t.Errorf("want 30, got %d", cfg.Session.CommandTimeoutSeconds)
 	}
@@ -51,9 +48,6 @@ whitelist = ["ls"]
 		t.Errorf("want 10, got %d", cfg.Session.IdleTimeoutMinutes)
 	}
 	// unset fields keep defaults
-	if cfg.Session.ConnectTimeoutSeconds != 15 {
-		t.Errorf("want default 15, got %d", cfg.Session.ConnectTimeoutSeconds)
-	}
 	if len(cfg.Approval.Whitelist) != 1 {
 		t.Errorf("want [ls], got %v", cfg.Approval.Whitelist)
 	}

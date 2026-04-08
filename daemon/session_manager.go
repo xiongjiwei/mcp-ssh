@@ -16,12 +16,12 @@ type SessionInfo struct {
 	Host        string
 	SessionID   string
 	IdleSeconds int
-	State       string // idle | invalid
+	State       string
 }
 
 type SessionManager struct {
 	mu       sync.Mutex
-	sessions map[string]*Session
+	sessions map[string]*Session // key: host
 	cfg      *config.Config
 	sshBin   string
 }
@@ -44,7 +44,7 @@ func newID() string {
 }
 
 // GetOrCreate returns the existing valid session for host, or opens a new one.
-func (sm *SessionManager) GetOrCreate(host string) (*Session, error) {
+func (sm *SessionManager) GetOrCreate(user, host string) (*Session, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -53,7 +53,7 @@ func (sm *SessionManager) GetOrCreate(host string) (*Session, error) {
 	}
 
 	timeout := time.Duration(sm.cfg.Session.ConnectTimeoutSeconds) * time.Second
-	conn, err := agentssh.New(sm.sshBin, host, timeout)
+	conn, err := agentssh.New(sm.sshBin, host, user, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("connect to %s: %w", host, err)
 	}
@@ -96,7 +96,7 @@ func (sm *SessionManager) List() []SessionInfo {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	result := make([]SessionInfo, 0, len(sm.sessions))
-	for host, s := range sm.sessions {
+	for _, s := range sm.sessions {
 		state := "idle"
 		if s.IsInvalid() {
 			state = "invalid"
@@ -104,7 +104,7 @@ func (sm *SessionManager) List() []SessionInfo {
 			state = "executing"
 		}
 		result = append(result, SessionInfo{
-			Host:        host,
+			Host:        s.Host(),
 			SessionID:   s.ID(),
 			IdleSeconds: int(time.Since(s.LastActivity()).Seconds()),
 			State:       state,

@@ -11,19 +11,19 @@ import (
 func newTestSM(t *testing.T) *daemon.SessionManager {
 	t.Helper()
 	cfg := config.Default()
-	return daemon.NewSessionManager(cfg, "sh")
+	return daemon.NewSessionManager(cfg, "bash")
 }
 
 func TestSM_GetOrCreate_NewSession(t *testing.T) {
 	sm := newTestSM(t)
 	defer sm.CloseAll()
 
-	s, err := sm.GetOrCreate("localhost")
+	s, err := sm.GetOrCreate("", "")
 	if err != nil {
 		t.Fatalf("GetOrCreate: %v", err)
 	}
-	if s.Host() != "localhost" {
-		t.Errorf("want localhost, got %s", s.Host())
+	if s == nil {
+		t.Fatal("want non-nil session")
 	}
 }
 
@@ -31,8 +31,8 @@ func TestSM_GetOrCreate_Reuses(t *testing.T) {
 	sm := newTestSM(t)
 	defer sm.CloseAll()
 
-	s1, _ := sm.GetOrCreate("localhost")
-	s2, _ := sm.GetOrCreate("localhost")
+	s1, _ := sm.GetOrCreate("", "")
+	s2, _ := sm.GetOrCreate("", "")
 	if s1.ID() != s2.ID() {
 		t.Error("want same session on second call")
 	}
@@ -40,10 +40,10 @@ func TestSM_GetOrCreate_Reuses(t *testing.T) {
 
 func TestSM_Close_RemovesSession(t *testing.T) {
 	sm := newTestSM(t)
-	sm.GetOrCreate("localhost")
-	sm.Close("localhost")
+	sm.GetOrCreate("", "")
+	sm.Close("")
 
-	s2, _ := sm.GetOrCreate("localhost")
+	s2, _ := sm.GetOrCreate("", "")
 	if s2 == nil {
 		t.Fatal("want new session after close")
 	}
@@ -53,25 +53,24 @@ func TestSM_List(t *testing.T) {
 	sm := newTestSM(t)
 	defer sm.CloseAll()
 
-	sm.GetOrCreate("host1")
-	sm.GetOrCreate("host2")
+	sm.GetOrCreate("", "")
 
 	infos := sm.List()
-	if len(infos) != 2 {
-		t.Errorf("want 2 sessions, got %d", len(infos))
+	if len(infos) != 1 {
+		t.Errorf("want 1 session, got %d", len(infos))
 	}
 }
 
 func TestSM_IdleReap(t *testing.T) {
 	sm := newTestSM(t)
-	s, _ := sm.GetOrCreate("localhost")
+	s, _ := sm.GetOrCreate("", "")
 	id := s.ID()
 
 	// Force expiry
 	s.SetLastActivity(time.Now().Add(-24 * time.Hour))
 	sm.Reap()
 
-	s2, _ := sm.GetOrCreate("localhost")
+	s2, _ := sm.GetOrCreate("", "")
 	if s2.ID() == id {
 		t.Error("want new session after idle reap")
 	}

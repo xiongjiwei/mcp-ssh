@@ -18,7 +18,7 @@ import (
 func newTestTools(t *testing.T) *agentmcp.Tools {
 	t.Helper()
 	cfg := config.Default()
-	sm := daemon.NewSessionManager(cfg, "sh")
+	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(os.DevNull, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover("auto_deny"))
 	return agentmcp.NewTools(sm, gate, logger, cfg)
@@ -43,7 +43,7 @@ func TestTools_Status_NoSessions(t *testing.T) {
 func TestTools_Open_Success(t *testing.T) {
 	tools := newTestTools(t)
 	req := mcp.CallToolRequest{}
-	req.Params.Arguments = map[string]any{"host": ""}
+	req.Params.Arguments = map[string]any{"host": "", "user": ""}
 	result, err := tools.HandleOpen(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestTools_Exec_WhitelistedCommand(t *testing.T) {
 
 	// Open first
 	openReq := mcp.CallToolRequest{}
-	openReq.Params.Arguments = map[string]any{"host": ""}
+	openReq.Params.Arguments = map[string]any{"host": "", "user": ""}
 	tools.HandleOpen(ctx, openReq)
 
 	// Exec whitelisted command
@@ -96,7 +96,7 @@ func TestTools_Exec_NotWhitelisted_AutoDeny(t *testing.T) {
 	ctx := context.Background()
 
 	openReq := mcp.CallToolRequest{}
-	openReq.Params.Arguments = map[string]any{"host": ""}
+	openReq.Params.Arguments = map[string]any{"host": "", "user": ""}
 	tools.HandleOpen(ctx, openReq)
 
 	execReq := mcp.CallToolRequest{}

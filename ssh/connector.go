@@ -1,105 +1,136 @@
 package ssh
 
 import (
-	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/creack/pty"
 )
 
-// Connector wraps a system ssh process attached to a PTY.
+// Connector wraps a persistent shell process with stdin/stdout pipes.
+// No PTY is used — output is clean (no echo, no ANSI escapes, no \r\n).
 type Connector struct {
 	cmd      *exec.Cmd
-	ptmx     *os.File
+	stdin    io.WriteCloser
+	stdout   io.ReadCloser
 	sentinel string
 }
 
-// New launches sshBin connecting to host (e.g. "ssh" "myserver").
-// If host is empty, the binary is invoked with no arguments (for testing with "sh").
-func New(sshBin, host string, connectTimeout time.Duration) (*Connector, error) {
+// New launches a persistent shell via pipes, with stderr merged into stdout.
+// Both local and remote paths use "bash --norc --noprofile" to suppress rc
+// files, aliases, and motd/banner noise for clean, AI-friendly output.
+// For local testing (host==""): sshBin -c "bash --norc --noprofile"
+// For remote hosts: ssh ... user@host "bash --norc --noprofile"
+func New(sshBin, host, user string, connectTimeout time.Duration) (*Connector, error) {
 	var cmd *exec.Cmd
 	if host == "" {
-		cmd = exec.Command(sshBin)
+		cmd = exec.Command(sshBin, "-c", "bash --norc --noprofile")
 	} else {
-		cmd = exec.Command(sshBin, "-tt", host)
+		target := user + "@" + host
+		args := []string{
+			"-o", "StrictHostKeyChecking=no",
+			"-o", "UserKnownHostsFile=/dev/null",
+			"-o", "LogLevel=QUIET",
+			"-T",
+			target,
+			"bash --norc --noprofile",
+		}
+		cmd = exec.Command(sshBin, args...)
 	}
 
-	ptmx, err := pty.Start(cmd)
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return nil, fmt.Errorf("pty start: %w", err)
+		return nil, fmt.Errorf("stdin pipe: %w", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("stdout pipe: %w", err)
+	}
+	// After StdoutPipe(), cmd.Stdout holds the pipe's write end.
+	// Point stderr to the same pipe so all output comes through one reader.
+	cmd.Stderr = cmd.Stdout
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start: %w", err)
 	}
 
 	sentinel, err := generateSentinel()
 	if err != nil {
-		ptmx.Close()
 		cmd.Process.Kill()
 		return nil, fmt.Errorf("sentinel: %w", err)
 	}
 
-	c := &Connector{cmd: cmd, ptmx: ptmx, sentinel: sentinel}
-
-	// Inject sentinel and PS1 in a single atomic line.
-	// Double-quoted PS1 embeds the sentinel value at assignment time,
-	// portable across bash, zsh, and sh.
-	initLine := fmt.Sprintf(
-		`export __AGENT_SH_SENTINEL__="%s"; export PS1="${__AGENT_SH_SENTINEL__}"$'\n'`+"\n",
-		sentinel,
-	)
-	if _, err := io.WriteString(ptmx, initLine); err != nil {
-		ptmx.Close()
-		cmd.Process.Kill()
-		return nil, fmt.Errorf("write init: %w", err)
+	c := &Connector{
+		cmd:      cmd,
+		stdin:    stdin,
+		stdout:   stdout,
+		sentinel: sentinel,
 	}
 
-	if err := c.waitForSentinel(connectTimeout); err != nil {
-		ptmx.Close()
+	// Verify the remote shell is alive before returning.
+	if err := c.waitForReady(connectTimeout); err != nil {
 		cmd.Process.Kill()
 		return nil, err
 	}
+
 	return c, nil
 }
 
-func (c *Connector) Sentinel() string { return c.sentinel }
-func (c *Connector) PTY() *os.File    { return c.ptmx }
+func (c *Connector) Sentinel() string      { return c.sentinel }
+func (c *Connector) Stdin() io.WriteCloser  { return c.stdin }
+func (c *Connector) Stdout() io.ReadCloser  { return c.stdout }
 
 func (c *Connector) Close() error {
+	c.stdin.Close()
 	if c.cmd.Process != nil {
 		c.cmd.Process.Kill()
 	}
-	return c.ptmx.Close()
+	return c.cmd.Wait()
 }
 
-func (c *Connector) waitForSentinel(timeout time.Duration) error {
-	done := make(chan error, 1)
+// waitForReady sends an echo-sentinel command via stdin, then reads stdout
+// until the sentinel appears, confirming the shell is alive and ready.
+func (c *Connector) waitForReady(timeout time.Duration) error {
+	initCmd := fmt.Sprintf("echo '%s'\n", c.sentinel)
+	if _, err := io.WriteString(c.stdin, initCmd); err != nil {
+		return fmt.Errorf("write init: %w", err)
+	}
+
+	ch := make(chan error, 1)
 	go func() {
-		scanner := bufio.NewScanner(c.ptmx)
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), c.sentinel) {
-				done <- nil
+		var buf []byte
+		tmp := make([]byte, 4096)
+		for {
+			n, err := c.stdout.Read(tmp)
+			if n > 0 {
+				buf = append(buf, tmp[:n]...)
+				if strings.Contains(string(buf), c.sentinel) {
+					ch <- nil
+					return
+				}
+			}
+			if err != nil {
+				ch <- fmt.Errorf("shell not ready: %w", err)
 				return
 			}
 		}
-		done <- fmt.Errorf("PTY closed before sentinel appeared")
 	}()
+
 	select {
-	case err := <-done:
+	case err := <-ch:
 		return err
 	case <-time.After(timeout):
-		return fmt.Errorf("connect timeout: sentinel not seen within %s", timeout)
+		return fmt.Errorf("connect timeout: shell not ready within %s", timeout)
 	}
 }
 
 func generateSentinel() (string, error) {
-	out, err := exec.Command("sh", "-c",
-		`cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen`,
-	).Output()
-	if err != nil {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return "agentsh_" + strings.TrimSpace(string(out)), nil
+	return "agentsh_" + hex.EncodeToString(b), nil
 }

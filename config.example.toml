@@ -1,0 +1,20 @@
+# agent-sh configuration
+# Copy to ~/.agent-sh/config.toml and customize as needed.
+
+[session]
+idle_timeout_minutes    = 30       # Close idle SSH sessions after N minutes
+connect_timeout_seconds = 15       # Timeout for establishing SSH connections
+command_timeout_seconds = 30       # Default timeout for command execution
+max_output_bytes        = 1048576  # Truncate command output beyond 1 MB
+
+[approval]
+# Provider for non-whitelisted commands: "auto_deny" | "auto_approve"
+provider = "auto_deny"
+
+# Commands allowed to execute without approval.
+# Only the base command name is checked (e.g. "ls" matches "ls -la /tmp").
+whitelist = [
+  "ls", "pwd", "cat", "echo", "grep", "find",
+  "head", "tail", "ps", "df", "du", "uname",
+  "whoami", "env", "cd",
+]
