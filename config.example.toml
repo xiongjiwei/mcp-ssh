@@ -8,13 +8,19 @@ command_timeout_seconds = 30       # Default timeout for command execution
 max_output_bytes        = 1048576  # Truncate command output beyond 1 MB
 
 [approval]
-# Provider for non-whitelisted commands: "auto_deny" | "auto_approve"
+# Provider for non-whitelisted commands: "auto_deny" | "iflow"
 provider = "auto_deny"
 
 # Commands allowed to execute without approval.
 # Only the base command name is checked (e.g. "ls" matches "ls -la /tmp").
 whitelist = [
-  "ls", "pwd", "cat", "echo", "grep", "find",
+  "ls", "pwd", "cat", "echo", "grep", "find", "wc",
   "head", "tail", "ps", "df", "du", "uname",
   "whoami", "env", "cd",
 ]
+
+# iFlow approval provider configuration (used when provider = "iflow")
+[approval.iflow]
+endpoint = "https://iflow.example.com/api"
+api_key = ""                          # Your iFlow API key
+poll_period_seconds = 5               # Poll interval for approval status

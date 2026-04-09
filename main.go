@@ -28,7 +28,12 @@ func main() {
 
 	sm := daemon.NewSessionManager(cfg, "ssh")
 	logger := audit.New(filepath.Join(dir, "audit.log"), os.Stderr)
-	approver := approval.NewApprover(cfg.Approval.Provider)
+	approver := approval.NewApprover(approval.Config{
+		Provider:        cfg.Approval.Provider,
+		IFlowEndpoint:   cfg.Approval.IFlow.Endpoint,
+		IFlowAPIKey:     cfg.Approval.IFlow.APIKey,
+		IFlowPollPeriod: cfg.Approval.IFlow.PollPeriod,
+	})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approver)
 
 	tools := agentmcp.NewTools(sm, gate, logger, cfg)

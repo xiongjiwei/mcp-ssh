@@ -20,7 +20,7 @@ func newTestTools(t *testing.T) *agentmcp.Tools {
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(os.DevNull, &bytes.Buffer{})
-	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover("auto_deny"))
+	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
 	return agentmcp.NewTools(sm, gate, logger, cfg)
 }
 

@@ -62,20 +62,82 @@ func (g *ApprovalGate) tokenWhitelisted(segment string) bool {
 func containsAmbiguous(cmd string) bool {
 	return strings.Contains(cmd, "$(") ||
 		strings.Contains(cmd, "`") ||
-		strings.Contains(cmd, "{")
+		strings.Contains(cmd, "{") ||
+		strings.Contains(cmd, "<(") ||
+		strings.Contains(cmd, ">(")
 }
 
 func splitCompound(cmd string) []string {
-	cmd = strings.ReplaceAll(cmd, "&&", "\x00")
-	cmd = strings.ReplaceAll(cmd, "||", "\x00")
-	cmd = strings.ReplaceAll(cmd, "|", "\x00")
-	cmd = strings.ReplaceAll(cmd, ";", "\x00")
-	parts := strings.Split(cmd, "\x00")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if p = strings.TrimSpace(p); p != "" {
-			result = append(result, p)
+	var result []string
+	var buf strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+
+	for i := 0; i < len(cmd); i++ {
+		c := cmd[i]
+
+		switch c {
+		case '\'':
+			if !inDoubleQuote {
+				inSingleQuote = !inSingleQuote
+			}
+			buf.WriteByte(c)
+		case '"':
+			if !inSingleQuote {
+				inDoubleQuote = !inDoubleQuote
+			}
+			buf.WriteByte(c)
+		case '&':
+			if !inSingleQuote && !inDoubleQuote {
+				if i+1 < len(cmd) && cmd[i+1] == '&' {
+					// && operator
+					if buf.Len() > 0 {
+						result = append(result, strings.TrimSpace(buf.String()))
+						buf.Reset()
+					}
+					i++ // skip next &
+				} else {
+					buf.WriteByte(c)
+				}
+			} else {
+				buf.WriteByte(c)
+			}
+		case '|':
+			if !inSingleQuote && !inDoubleQuote {
+				if i+1 < len(cmd) && cmd[i+1] == '|' {
+					// || operator
+					if buf.Len() > 0 {
+						result = append(result, strings.TrimSpace(buf.String()))
+						buf.Reset()
+					}
+					i++ // skip next |
+				} else {
+					// Single | (pipe)
+					if buf.Len() > 0 {
+						result = append(result, strings.TrimSpace(buf.String()))
+						buf.Reset()
+					}
+				}
+			} else {
+				buf.WriteByte(c)
+			}
+		case ';':
+			if !inSingleQuote && !inDoubleQuote {
+				if buf.Len() > 0 {
+					result = append(result, strings.TrimSpace(buf.String()))
+					buf.Reset()
+				}
+			} else {
+				buf.WriteByte(c)
+			}
+		default:
+			buf.WriteByte(c)
 		}
 	}
+
+	if buf.Len() > 0 {
+		result = append(result, strings.TrimSpace(buf.String()))
+	}
+
 	return result
 }

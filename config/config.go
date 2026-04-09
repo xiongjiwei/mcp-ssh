@@ -18,6 +18,14 @@ type SessionConfig struct {
 type ApprovalConfig struct {
 	Provider  string   `toml:"provider"`
 	Whitelist []string `toml:"whitelist"`
+	IFlow     IFlowConfig `toml:"iflow"`
+}
+
+// IFlowConfig holds configuration for the iFlow approver.
+type IFlowConfig struct {
+	Endpoint   string `toml:"endpoint"`
+	APIKey     string `toml:"api_key"`
+	PollPeriod int    `toml:"poll_period_seconds"`
 }
 
 type Config struct {
@@ -36,7 +44,7 @@ func Default() *Config {
 		Approval: ApprovalConfig{
 			Provider: "auto_deny",
 			Whitelist: []string{
-				"ls", "pwd", "cat", "echo", "grep", "find",
+				"ls", "pwd", "cat", "echo", "grep", "find", "wc",
 				"head", "tail", "ps", "df", "du", "uname",
 				"whoami", "env", "cd",
 			},
