@@ -37,3 +37,6 @@ max_size_mb  = 128
 max_age_days = 3
 # compress: gzip rotated log files to save disk space.
 compress     = false
+# victoria_logs_url: send structured audit JSON to VictoriaLogs.
+# Set to the base URL (e.g. "http://host:9428"). Leave empty to discard JSON output.
+victoria_logs_url = ""
