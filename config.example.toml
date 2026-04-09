@@ -28,4 +28,12 @@ poll_period_seconds = 5               # Poll interval for approval status
 [server]
 # addr is the listen address for `agent-sh serve` (StreamableHTTP mode).
 # Overridable at runtime with --addr flag.
-addr = "127.0.0.1:8080"
+addr = "127.0.0.1:7408"
+
+[audit]
+# max_size_mb: rotate audit.log when it exceeds this size (megabytes).
+max_size_mb  = 128
+# max_age_days: delete rotated log files older than this many days.
+max_age_days = 3
+# compress: gzip rotated log files to save disk space.
+compress     = false
