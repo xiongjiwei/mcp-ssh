@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -70,7 +71,11 @@ func initDeps() error {
 		MaxAge:    cfg.Audit.MaxAgeDays,
 		Compress:  cfg.Audit.Compress,
 	}
-	logger := audit.New(logWriter, os.Stderr)
+	var jsonOut io.Writer = io.Discard
+	if cfg.Audit.VictoriaLogsURL != "" {
+		jsonOut = audit.NewVictoriaLogsWriter(cfg.Audit.VictoriaLogsURL)
+	}
+	logger := audit.New(logWriter, jsonOut)
 	approver := approval.NewApprover(approval.Config{
 		Provider:        cfg.Approval.Provider,
 		IFlowEndpoint:   cfg.Approval.IFlow.Endpoint,
