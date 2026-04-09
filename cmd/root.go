@@ -71,7 +71,7 @@ func initDeps() error {
 		IFlowPollPeriod: cfg.Approval.IFlow.PollPeriod,
 	})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approver)
-	tools := agentmcp.NewTools(sm, gate, logger, cfg)
+	tools := agentmcp.NewTools(sm, gate, logger, cfg, "stdio")
 	mcpSrv = agentmcp.NewServer(tools)
 	return nil
 }
