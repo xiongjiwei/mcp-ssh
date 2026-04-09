@@ -31,10 +31,17 @@ type ServerConfig struct {
 	Addr string `toml:"addr"`
 }
 
+type AuditConfig struct {
+	MaxSizeMB  int  `toml:"max_size_mb"`
+	MaxAgeDays int  `toml:"max_age_days"`
+	Compress   bool `toml:"compress"`
+}
+
 type Config struct {
 	Session  SessionConfig  `toml:"session"`
 	Approval ApprovalConfig `toml:"approval"`
 	Server   ServerConfig   `toml:"server"`
+	Audit    AuditConfig    `toml:"audit"`
 }
 
 func Default() *Config {
@@ -54,7 +61,12 @@ func Default() *Config {
 			},
 		},
 		Server: ServerConfig{
-			Addr: "127.0.0.1:8080",
+			Addr: "127.0.0.1:7408",
+		},
+		Audit: AuditConfig{
+			MaxSizeMB:  128,
+			MaxAgeDays: 3,
+			Compress:   false,
 		},
 	}
 }
