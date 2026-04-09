@@ -3,7 +3,7 @@ package mcp_test
 import (
 	"bytes"
 	"context"
-	"os"
+	"io"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -19,7 +19,7 @@ func newTestTools(t *testing.T) *agentmcp.Tools {
 	t.Helper()
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
-	logger := audit.New(os.DevNull, &bytes.Buffer{})
+	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
 	return agentmcp.NewTools(sm, gate, logger, cfg, "stdio")
 }
@@ -134,7 +134,7 @@ func firstText(result *mcp.CallToolResult) string {
 func TestTools_Isolation_AgentCannotSeeOtherSession(t *testing.T) {
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
-	logger := audit.New(os.DevNull, &bytes.Buffer{})
+	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
 
 	toolsA := agentmcp.NewTools(sm, gate, logger, cfg, "agent-a")

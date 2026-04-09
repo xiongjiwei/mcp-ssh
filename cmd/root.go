@@ -7,6 +7,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"github.com/xiongjiwei/agent-sh/approval"
 	"github.com/xiongjiwei/agent-sh/audit"
 	"github.com/xiongjiwei/agent-sh/config"
@@ -63,7 +64,13 @@ func initDeps() error {
 	}
 
 	sm := daemon.NewSessionManager(cfg, "ssh")
-	logger := audit.New(filepath.Join(dir, "audit.log"), os.Stderr)
+	logWriter := &lumberjack.Logger{
+		Filename:  filepath.Join(dir, "audit.log"),
+		MaxSize:   cfg.Audit.MaxSizeMB,
+		MaxAge:    cfg.Audit.MaxAgeDays,
+		Compress:  cfg.Audit.Compress,
+	}
+	logger := audit.New(logWriter, os.Stderr)
 	approver := approval.NewApprover(approval.Config{
 		Provider:        cfg.Approval.Provider,
 		IFlowEndpoint:   cfg.Approval.IFlow.Endpoint,
