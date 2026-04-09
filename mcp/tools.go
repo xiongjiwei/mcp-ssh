@@ -44,8 +44,10 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		}
 	}
 
+	mcpSessionID := MCPSessionIDFromCtx(ctx)
+
 	// Session must already exist — exec does not auto-open.
-	sess := t.sm.Get(host)
+	sess := t.sm.Get(mcpSessionID, host)
 	if sess == nil {
 		return errResult(fmt.Sprintf("no open session for %s — call open first", host)), nil
 	}
@@ -90,7 +92,7 @@ func (t *Tools) HandleOpen(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult("user parameter required"), nil
 	}
 
-	sess, err := t.sm.GetOrCreate(user, host)
+	sess, err := t.sm.GetOrCreate(MCPSessionIDFromCtx(ctx), user, host)
 	if err != nil {
 		return errResult(fmt.Sprintf("failed to connect to %s: %v", host, err)), nil
 	}
@@ -102,19 +104,19 @@ func (t *Tools) HandleOpen(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 }
 
 // HandleClose implements the close MCP tool.
-func (t *Tools) HandleClose(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (t *Tools) HandleClose(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	host, err := req.RequireString("host")
 	if err != nil {
 		return okResult("closed"), nil
 	}
 
-	t.sm.Close(host)
+	t.sm.Close(MCPSessionIDFromCtx(ctx), host)
 	return okResult("closed"), nil
 }
 
 // HandleStatus implements the status MCP tool.
-func (t *Tools) HandleStatus(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	infos := t.sm.List()
+func (t *Tools) HandleStatus(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	infos := t.sm.List(MCPSessionIDFromCtx(ctx))
 	if len(infos) == 0 {
 		return okResult("no active sessions"), nil
 	}
