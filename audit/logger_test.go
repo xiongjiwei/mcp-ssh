@@ -15,8 +15,13 @@ func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
 	t.Helper()
 	dir := t.TempDir()
 	logPath := filepath.Join(dir, "audit.log")
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { f.Close() })
 	buf := &bytes.Buffer{}
-	return audit.New(logPath, buf), buf, logPath
+	return audit.New(f, buf), buf, logPath
 }
 
 func TestLogger_Exec(t *testing.T) {

@@ -4,18 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 )
 
 type Logger struct {
-	logPath string
-	jsonOut io.Writer
+	logWriter io.Writer
+	jsonOut   io.Writer
 }
 
-func New(logPath string, jsonOut io.Writer) *Logger {
-	return &Logger{logPath: logPath, jsonOut: jsonOut}
+func New(logWriter io.Writer, jsonOut io.Writer) *Logger {
+	return &Logger{logWriter: logWriter, jsonOut: jsonOut}
 }
 
 func (l *Logger) LogExec(user, host, sessionID, command, stdout string, exitCode int, durationMs int64) {
@@ -60,12 +59,7 @@ func (l *Logger) LogApprovalDenied(user, host, sessionID, command string) {
 }
 
 func (l *Logger) appendFile(line string) {
-	f, err := os.OpenFile(l.logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-	f.WriteString(line)
+	l.logWriter.Write([]byte(line))
 }
 
 func (l *Logger) writeJSON(v any) {
