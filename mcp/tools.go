@@ -14,14 +14,27 @@ import (
 
 // Tools holds the dependencies shared by all tool handlers.
 type Tools struct {
-	sm     *daemon.SessionManager
-	gate   *audit.ApprovalGate
-	logger *audit.Logger
-	cfg    *config.Config
+	sm             *daemon.SessionManager
+	gate           *audit.ApprovalGate
+	logger         *audit.Logger
+	cfg            *config.Config
+	stdioSessionID string
 }
 
-func NewTools(sm *daemon.SessionManager, gate *audit.ApprovalGate, logger *audit.Logger, cfg *config.Config) *Tools {
-	return &Tools{sm: sm, gate: gate, logger: logger, cfg: cfg}
+// NewTools constructs Tools. stdioSessionID is used when no MCP session ID is
+// present in the context (stdio mode). Pass "stdio" for stdio mode, "" for
+// serve mode (the context always carries the ID in serve mode).
+func NewTools(sm *daemon.SessionManager, gate *audit.ApprovalGate, logger *audit.Logger, cfg *config.Config, stdioSessionID string) *Tools {
+	return &Tools{sm: sm, gate: gate, logger: logger, cfg: cfg, stdioSessionID: stdioSessionID}
+}
+
+// mcpSessionID extracts the MCP session ID from ctx, falling back to
+// stdioSessionID when the context carries no value (stdio mode).
+func (t *Tools) mcpSessionID(ctx context.Context) string {
+	if id := MCPSessionIDFromCtx(ctx); id != "" {
+		return id
+	}
+	return t.stdioSessionID
 }
 
 // HandleExec implements the exec MCP tool.
@@ -44,10 +57,10 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		}
 	}
 
-	mcpSessionID := MCPSessionIDFromCtx(ctx)
+	mcpSessID := t.mcpSessionID(ctx)
 
 	// Session must already exist — exec does not auto-open.
-	sess := t.sm.Get(mcpSessionID, host)
+	sess := t.sm.Get(mcpSessID, host)
 	if sess == nil {
 		return errResult(fmt.Sprintf("no open session for %s — call open first", host)), nil
 	}
@@ -66,7 +79,6 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	durationMs := time.Since(start).Milliseconds()
 
 	if execErr != nil {
-		// Execution error (timeout, session invalid) — log as exec error, not approval denial
 		t.logger.LogExec(sess.User(), host, sess.ID(), command, "", 1, durationMs)
 		return errResult(execErr.Error()), nil
 	}
@@ -92,7 +104,9 @@ func (t *Tools) HandleOpen(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult("user parameter required"), nil
 	}
 
-	sess, err := t.sm.GetOrCreate(MCPSessionIDFromCtx(ctx), user, host)
+	mcpSessID := t.mcpSessionID(ctx)
+
+	sess, err := t.sm.GetOrCreate(mcpSessID, user, host)
 	if err != nil {
 		return errResult(fmt.Sprintf("failed to connect to %s: %v", host, err)), nil
 	}
@@ -110,13 +124,13 @@ func (t *Tools) HandleClose(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return okResult("closed"), nil
 	}
 
-	t.sm.Close(MCPSessionIDFromCtx(ctx), host)
+	t.sm.Close(t.mcpSessionID(ctx), host)
 	return okResult("closed"), nil
 }
 
 // HandleStatus implements the status MCP tool.
 func (t *Tools) HandleStatus(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	infos := t.sm.List(MCPSessionIDFromCtx(ctx))
+	infos := t.sm.List(t.mcpSessionID(ctx))
 	if len(infos) == 0 {
 		return okResult("no active sessions"), nil
 	}

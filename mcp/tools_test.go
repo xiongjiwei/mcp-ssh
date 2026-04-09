@@ -21,7 +21,7 @@ func newTestTools(t *testing.T) *agentmcp.Tools {
 	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(os.DevNull, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
-	return agentmcp.NewTools(sm, gate, logger, cfg)
+	return agentmcp.NewTools(sm, gate, logger, cfg, "stdio")
 }
 
 func TestTools_Status_NoSessions(t *testing.T) {
@@ -129,4 +129,30 @@ func firstText(result *mcp.CallToolResult) string {
 		return tc.Text
 	}
 	return ""
+}
+
+func TestTools_Isolation_AgentCannotSeeOtherSession(t *testing.T) {
+	cfg := config.Default()
+	sm := daemon.NewSessionManager(cfg, "bash")
+	logger := audit.New(os.DevNull, &bytes.Buffer{})
+	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
+
+	toolsA := agentmcp.NewTools(sm, gate, logger, cfg, "agent-a")
+	toolsB := agentmcp.NewTools(sm, gate, logger, cfg, "agent-b")
+
+	// Agent A opens a session on host ""
+	openReq := mcp.CallToolRequest{}
+	openReq.Params.Arguments = map[string]any{"host": "", "user": ""}
+	toolsA.HandleOpen(context.Background(), openReq)
+
+	// Agent B tries to exec on the same host — should fail (no open session)
+	execReq := mcp.CallToolRequest{}
+	execReq.Params.Arguments = map[string]any{"host": "", "command": "echo hello"}
+	result, err := toolsB.HandleExec(context.Background(), execReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.IsError {
+		t.Error("agent-b should not be able to exec on agent-a's session")
+	}
 }
