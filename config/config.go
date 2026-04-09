@@ -16,21 +16,25 @@ type SessionConfig struct {
 }
 
 type ApprovalConfig struct {
-	Provider  string   `toml:"provider"`
-	Whitelist []string `toml:"whitelist"`
+	Provider  string      `toml:"provider"`
+	Whitelist []string    `toml:"whitelist"`
 	IFlow     IFlowConfig `toml:"iflow"`
 }
 
-// IFlowConfig holds configuration for the iFlow approver.
 type IFlowConfig struct {
 	Endpoint   string `toml:"endpoint"`
 	APIKey     string `toml:"api_key"`
 	PollPeriod int    `toml:"poll_period_seconds"`
 }
 
+type ServerConfig struct {
+	Addr string `toml:"addr"`
+}
+
 type Config struct {
 	Session  SessionConfig  `toml:"session"`
 	Approval ApprovalConfig `toml:"approval"`
+	Server   ServerConfig   `toml:"server"`
 }
 
 func Default() *Config {
@@ -48,6 +52,9 @@ func Default() *Config {
 				"head", "tail", "ps", "df", "du", "uname",
 				"whoami", "env", "cd",
 			},
+		},
+		Server: ServerConfig{
+			Addr: "127.0.0.1:8080",
 		},
 	}
 }
@@ -67,9 +74,6 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
-// DefaultPath returns the default config file path under the user's home
-// directory. If the home directory cannot be determined, it falls back to a
-// relative path ".agent-sh/config.toml".
 func DefaultPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {

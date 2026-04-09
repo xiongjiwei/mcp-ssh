@@ -62,3 +62,28 @@ func TestLoad_MissingFile_ReturnsDefaults(t *testing.T) {
 		t.Error("want defaults when file missing")
 	}
 }
+
+func TestDefault_ServerAddr(t *testing.T) {
+	cfg := config.Default()
+	if cfg.Server.Addr != "127.0.0.1:8080" {
+		t.Errorf("want 127.0.0.1:8080, got %s", cfg.Server.Addr)
+	}
+}
+
+func TestLoad_ServerAddr_FromTOML(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(p, []byte(`
+[server]
+addr = "0.0.0.0:9090"
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Server.Addr != "0.0.0.0:9090" {
+		t.Errorf("want 0.0.0.0:9090, got %s", cfg.Server.Addr)
+	}
+}
