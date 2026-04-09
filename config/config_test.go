@@ -126,3 +126,28 @@ compress     = true
 		t.Errorf("want Compress=true, got %v", cfg.Audit.Compress)
 	}
 }
+
+func TestDefault_VictoriaLogsURL(t *testing.T) {
+	cfg := config.Default()
+	if cfg.Audit.VictoriaLogsURL != "" {
+		t.Errorf("want empty VictoriaLogsURL, got %q", cfg.Audit.VictoriaLogsURL)
+	}
+}
+
+func TestLoad_VictoriaLogsURL_FromTOML(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(p, []byte(`
+[audit]
+victoria_logs_url = "http://vl:9428"
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := config.Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Audit.VictoriaLogsURL != "http://vl:9428" {
+		t.Errorf("want http://vl:9428, got %q", cfg.Audit.VictoriaLogsURL)
+	}
+}

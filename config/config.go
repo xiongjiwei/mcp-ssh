@@ -32,9 +32,10 @@ type ServerConfig struct {
 }
 
 type AuditConfig struct {
-	MaxSizeMB  int  `toml:"max_size_mb"`
-	MaxAgeDays int  `toml:"max_age_days"`
-	Compress   bool `toml:"compress"`
+	MaxSizeMB       int    `toml:"max_size_mb"`
+	MaxAgeDays      int    `toml:"max_age_days"`
+	Compress        bool   `toml:"compress"`
+	VictoriaLogsURL string `toml:"victoria_logs_url"`
 }
 
 type Config struct {
