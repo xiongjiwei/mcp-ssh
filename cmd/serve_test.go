@@ -22,8 +22,8 @@ func TestResolveAddr_ConfigUsedWhenNoFlag(t *testing.T) {
 	}
 }
 
-func TestResolveAddr_DefaultWhenBothEmpty(t *testing.T) {
-	got := resolveAddr("", "")
+func TestResolveAddr_DefaultAddrFromConfig(t *testing.T) {
+	got := resolveAddr("", "127.0.0.1:8080")
 	if got != "127.0.0.1:8080" {
 		t.Errorf("want 127.0.0.1:8080, got %s", got)
 	}

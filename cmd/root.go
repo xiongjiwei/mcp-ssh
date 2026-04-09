@@ -53,7 +53,11 @@ func initDeps() error {
 		return fmt.Errorf("config: %w", err)
 	}
 
-	dir := filepath.Join(os.Getenv("HOME"), ".agent-sh")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("home dir: %w", err)
+	}
+	dir := filepath.Join(home, ".agent-sh")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}

@@ -22,13 +22,10 @@ func init() {
 }
 
 // resolveAddr returns the effective listen address.
-// Priority: flagAddr > cfgAddr > built-in default.
+// Priority: flagAddr > cfgAddr.
 func resolveAddr(flagAddr, cfgAddr string) string {
 	if flagAddr != "" {
 		return flagAddr
 	}
-	if cfgAddr != "" {
-		return cfgAddr
-	}
-	return "127.0.0.1:8080"
+	return cfgAddr
 }
