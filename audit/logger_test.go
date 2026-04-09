@@ -26,14 +26,14 @@ func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
 
 func TestLogger_Exec(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogExec("alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", 0, 42)
+	l.LogExec("1.2.3.4", "alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", 0, 42)
 
 	content, _ := os.ReadFile(logPath)
-	if !strings.Contains(string(content), "CMD: ls /tmp") {
-		t.Errorf("missing CMD line: %s", content)
+	if !strings.Contains(string(content), "EXEC: ls /tmp") {
+		t.Errorf("missing EXEC line: %s", content)
 	}
-	if !strings.Contains(string(content), "EXIT: 0") {
-		t.Errorf("missing EXIT line: %s", content)
+	if !strings.Contains(string(content), "EXIT:0") {
+		t.Errorf("missing EXIT field: %s", content)
 	}
 
 	var ev map[string]any
@@ -53,8 +53,8 @@ func TestLogger_Exec(t *testing.T) {
 
 func TestLogger_ApprovalCycle(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogApprovalRequested("alice", "srv1", "s1", "rm -rf /")
-	l.LogApprovalDenied("alice", "srv1", "s1", "rm -rf /")
+	l.LogApprovalRequested("1.2.3.4", "alice", "srv1", "s1", "rm -rf /")
+	l.LogApprovalDenied("1.2.3.4", "alice", "srv1", "s1", "rm -rf /")
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "APPROVAL: DENIED") {
@@ -75,7 +75,7 @@ func TestLogger_ApprovalCycle(t *testing.T) {
 
 func TestLogger_ApprovalApproved(t *testing.T) {
 	l, buf, _ := newTestLogger(t)
-	l.LogApprovalApproved("alice", "srv1", "s1", "deploy.sh", 0, 100)
+	l.LogApprovalApproved("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", 0, 100)
 
 	var ev map[string]any
 	json.NewDecoder(buf).Decode(&ev)

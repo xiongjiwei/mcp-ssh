@@ -95,7 +95,9 @@ func TestVictoriaLogsWriter_RetriesOnFailure(t *testing.T) {
 }
 
 func TestVictoriaLogsWriter_DropsAfterMaxRetries(t *testing.T) {
+	var attempts atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts.Add(1)
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
@@ -103,6 +105,9 @@ func TestVictoriaLogsWriter_DropsAfterMaxRetries(t *testing.T) {
 	w := audit.NewVictoriaLogsWriter(srv.URL)
 	w.Write([]byte(`{"event":"exec"}` + "\n"))
 
-	// Give time for all retries to exhaust. Must not panic.
+	// Give time for all retries to exhaust (100ms + 200ms delays = 300ms total wait).
 	time.Sleep(1200 * time.Millisecond)
+	if attempts.Load() != 3 {
+		t.Errorf("want 3 attempts, got %d", attempts.Load())
+	}
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"github.com/mark3labs/mcp-go/server"
@@ -19,7 +20,11 @@ var serveCmd = &cobra.Command{
 		httpSrv := server.NewStreamableHTTPServer(mcpSrv,
 			server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
 				id := r.Header.Get("Mcp-Session-Id")
-				return agentmcp.WithMCPSessionID(ctx, id)
+				ctx = agentmcp.WithMCPSessionID(ctx, id)
+				if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+					ctx = agentmcp.WithRemoteIP(ctx, ip)
+				}
+				return ctx
 			}),
 		)
 		return httpSrv.Start(addr)

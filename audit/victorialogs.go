@@ -3,6 +3,7 @@ package audit
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -58,12 +59,14 @@ func (w *VictoriaLogsWriter) run() {
 
 func (w *VictoriaLogsWriter) sendWithRetry(p []byte) {
 	delay := 100 * time.Millisecond
-	for i := 0; i < vlMaxRetries; i++ {
+	for i := range vlMaxRetries {
 		if err := w.send(p); err == nil {
 			return
 		}
-		time.Sleep(delay)
-		delay *= 2
+		if i < vlMaxRetries-1 {
+			time.Sleep(delay)
+			delay *= 2
+		}
 	}
 }
 
@@ -72,7 +75,10 @@ func (w *VictoriaLogsWriter) send(p []byte) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 	if resp.StatusCode >= 300 {
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}

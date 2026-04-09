@@ -68,8 +68,9 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	// Approval check
 	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, sess.ID(), command)
 	if approvalErr != nil || !allowed {
-		t.logger.LogApprovalRequested(sess.User(), host, sess.ID(), command)
-		t.logger.LogApprovalDenied(sess.User(), host, sess.ID(), command)
+		remoteIP := RemoteIPFromCtx(ctx)
+		t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command)
+		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command)
 		return errResult("command denied by user"), nil
 	}
 
@@ -78,12 +79,13 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	stdout, exitCode, execErr := sess.Exec(command, time.Duration(timeoutSec)*time.Second)
 	durationMs := time.Since(start).Milliseconds()
 
+	remoteIP := RemoteIPFromCtx(ctx)
 	if execErr != nil {
-		t.logger.LogExec(sess.User(), host, sess.ID(), command, "", 1, durationMs)
+		t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, "", 1, durationMs)
 		return errResult(execErr.Error()), nil
 	}
 
-	t.logger.LogExec(sess.User(), host, sess.ID(), command, stdout, exitCode, durationMs)
+	t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, stdout, exitCode, durationMs)
 
 	content := []mcp.Content{
 		mcp.TextContent{Type: "text", Text: stdout},
