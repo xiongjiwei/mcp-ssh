@@ -24,3 +24,8 @@ whitelist = [
 endpoint = "https://iflow.example.com/api"
 api_key = ""                          # Your iFlow API key
 poll_period_seconds = 5               # Poll interval for approval status
+
+[server]
+# addr is the listen address for `agent-sh serve` (StreamableHTTP mode).
+# Overridable at runtime with --addr flag.
+addr = "127.0.0.1:8080"
