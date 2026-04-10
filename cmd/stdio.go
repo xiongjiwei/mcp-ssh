@@ -8,6 +8,9 @@ import (
 var stdioCmd = &cobra.Command{
 	Use:   "stdio",
 	Short: "Run MCP server over stdio (default mode)",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return initDeps("stdio")
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runStdio()
 	},
