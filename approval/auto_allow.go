@@ -6,6 +6,6 @@ import "context"
 // Use only in trusted environments where unrestricted command execution is acceptable.
 type AutoAllowApprover struct{}
 
-func (a *AutoAllowApprover) RequestApproval(_ context.Context, _, _, _ string) (bool, error) {
+func (a *AutoAllowApprover) RequestApproval(_ context.Context, _, _, _, _ string) (bool, error) {
 	return true, nil
 }
