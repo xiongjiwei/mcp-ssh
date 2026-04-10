@@ -13,7 +13,7 @@ import (
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
 	"github.com/xiongjiwei/mcp-ssh/daemon"
-	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
+	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 var (
@@ -80,7 +80,7 @@ func initDeps() error {
 		Provider: cfg.Approval.Provider,
 	})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approver)
-	tools := agentmcp.NewTools(sm, gate, logger, cfg, "stdio")
-	mcpSrv = agentmcp.NewServer(tools)
+	tools := mcpsrv.NewTools(sm, gate, logger, cfg, "stdio")
+	mcpSrv = mcpsrv.NewServer(tools)
 	return nil
 }

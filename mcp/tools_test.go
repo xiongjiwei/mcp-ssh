@@ -11,17 +11,17 @@ import (
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
 	"github.com/xiongjiwei/mcp-ssh/daemon"
-	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
+	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 
-func newTestTools(t *testing.T) *agentmcp.Tools {
+func newTestTools(t *testing.T) *mcpsrv.Tools {
 	t.Helper()
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
-	return agentmcp.NewTools(sm, gate, logger, cfg, "stdio")
+	return mcpsrv.NewTools(sm, gate, logger, cfg, "stdio")
 }
 
 func TestTools_Status_NoSessions(t *testing.T) {
@@ -137,8 +137,8 @@ func TestTools_Isolation_AgentCannotSeeOtherSession(t *testing.T) {
 	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
 
-	toolsA := agentmcp.NewTools(sm, gate, logger, cfg, "agent-a")
-	toolsB := agentmcp.NewTools(sm, gate, logger, cfg, "agent-b")
+	toolsA := mcpsrv.NewTools(sm, gate, logger, cfg, "agent-a")
+	toolsB := mcpsrv.NewTools(sm, gate, logger, cfg, "agent-b")
 
 	// Agent A opens a session on host ""
 	openReq := mcp.CallToolRequest{}
