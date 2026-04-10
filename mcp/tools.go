@@ -69,8 +69,8 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, sess.ID(), command)
 	if approvalErr != nil || !allowed {
 		remoteIP := RemoteIPFromCtx(ctx)
-		t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command)
-		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command)
+		digest := t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command)
+		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command, digest)
 		return errResult("command denied by user"), nil
 	}
 
@@ -113,6 +113,8 @@ func (t *Tools) HandleOpen(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult(fmt.Sprintf("failed to connect to %s: %v", host, err)), nil
 	}
 
+	t.logger.LogOpen(RemoteIPFromCtx(ctx), user, host, sess.ID())
+
 	text := fmt.Sprintf("session_id: %s\nhost: %s\nstate: ready", sess.ID(), host)
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{mcp.TextContent{Type: "text", Text: text}},
@@ -126,7 +128,12 @@ func (t *Tools) HandleClose(ctx context.Context, req mcp.CallToolRequest) (*mcp.
 		return okResult("closed"), nil
 	}
 
-	t.sm.Close(t.mcpSessionID(ctx), host)
+	mcpSessID := t.mcpSessionID(ctx)
+	sess := t.sm.Get(mcpSessID, host)
+	t.sm.Close(mcpSessID, host)
+	if sess != nil {
+		t.logger.LogClose(RemoteIPFromCtx(ctx), sess.User(), host, sess.ID())
+	}
 	return okResult("closed"), nil
 }
 

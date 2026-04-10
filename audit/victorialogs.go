@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -59,8 +60,9 @@ func (w *VictoriaLogsWriter) run() {
 
 func (w *VictoriaLogsWriter) sendWithRetry(p []byte) {
 	delay := 100 * time.Millisecond
+	var lastErr error
 	for i := range vlMaxRetries {
-		if err := w.send(p); err == nil {
+		if lastErr = w.send(p); lastErr == nil {
 			return
 		}
 		if i < vlMaxRetries-1 {
@@ -68,6 +70,7 @@ func (w *VictoriaLogsWriter) sendWithRetry(p []byte) {
 			delay *= 2
 		}
 	}
+	slog.Error("victorialogs: dropped event after retries", "err", lastErr, "url", w.url)
 }
 
 func (w *VictoriaLogsWriter) send(p []byte) error {

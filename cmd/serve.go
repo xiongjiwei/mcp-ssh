@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"log/slog"
 	"net"
 	"net/http"
 
@@ -17,6 +18,20 @@ var serveCmd = &cobra.Command{
 	Short: "Run MCP server over StreamableHTTP",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		addr := resolveAddr(addrFlag, cfg.Server.Addr)
+
+		vlStatus := "(disabled)"
+		if cfg.Audit.VictoriaLogsURL != "" {
+			vlStatus = cfg.Audit.VictoriaLogsURL
+		}
+		slog.Info("serving",
+			"addr", addr,
+			"audit", "~/.agent-sh/audit.log",
+			"audit_mb", cfg.Audit.MaxSizeMB,
+			"audit_days", cfg.Audit.MaxAgeDays,
+			"approval", cfg.Approval.Provider,
+			"victoria", vlStatus,
+		)
+
 		httpSrv := server.NewStreamableHTTPServer(mcpSrv,
 			server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
 				id := r.Header.Get("Mcp-Session-Id")

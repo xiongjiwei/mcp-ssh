@@ -54,7 +54,7 @@ func TestLogger_Exec(t *testing.T) {
 func TestLogger_ApprovalCycle(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
 	l.LogApprovalRequested("1.2.3.4", "alice", "srv1", "s1", "rm -rf /")
-	l.LogApprovalDenied("1.2.3.4", "alice", "srv1", "s1", "rm -rf /")
+	l.LogApprovalDenied("1.2.3.4", "alice", "srv1", "s1", "rm -rf /", "deadbeef")
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "APPROVAL: DENIED") {
@@ -75,7 +75,7 @@ func TestLogger_ApprovalCycle(t *testing.T) {
 
 func TestLogger_ApprovalApproved(t *testing.T) {
 	l, buf, _ := newTestLogger(t)
-	l.LogApprovalApproved("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", 0, 100)
+	l.LogApprovalApproved("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", "deadbeef", 0, 100)
 
 	var ev map[string]any
 	json.NewDecoder(buf).Decode(&ev)
