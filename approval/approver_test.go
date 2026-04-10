@@ -36,3 +36,14 @@ func TestNewApprover_UnknownProvider_FallsBackToAutoDeny(t *testing.T) {
 		t.Error("unknown provider should fall back to auto_deny")
 	}
 }
+
+func TestAutoAllowApprover_AlwaysAllows(t *testing.T) {
+	a := approval.NewApprover(approval.Config{Provider: "auto_allow"})
+	ok, err := a.RequestApproval(context.Background(), "user", "srv1", "rm -rf /")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !ok {
+		t.Error("AutoAllowApprover should always allow")
+	}
+}

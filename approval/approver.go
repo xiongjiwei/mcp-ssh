@@ -18,5 +18,10 @@ type Config struct {
 // NewApprover returns the Approver for the given provider name.
 // Unknown providers fall back to AutoDenyApprover.
 func NewApprover(cfg Config) Approver {
-	return &AutoDenyApprover{}
+	switch cfg.Provider {
+	case "auto_allow":
+		return &AutoAllowApprover{}
+	default:
+		return &AutoDenyApprover{}
+	}
 }

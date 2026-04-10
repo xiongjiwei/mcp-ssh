@@ -9,6 +9,7 @@ max_output_bytes        = 1048576  # Truncate command output beyond 1 MB
 
 [approval]
 provider = "auto_deny"
+# provider = "auto_allow"   # Allow all non-whitelisted commands without confirmation (trusted environments only)
 
 # Commands allowed to execute without approval.
 # Only the base command name is checked (e.g. "ls" matches "ls -la /tmp").

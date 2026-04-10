@@ -39,7 +39,7 @@ mcp-ssh serve
 mcp-ssh serve --addr 127.0.0.1:7408
 ```
 
-In serve mode the server listens at `127.0.0.1:7408` by default and registers the MCP handler at `/mcp`.
+In serve mode the server listens at `:7408` by default and registers the MCP handler at `/mcp`.
 
 ## MCP Tools
 
@@ -91,6 +91,7 @@ Every `exec` call goes through an approval gate before execution:
 | Provider | Behavior |
 |----------|----------|
 | `auto_deny` (default) | Deny all non-whitelisted commands immediately. Safe for unattended use. |
+| `auto_allow` | Allow all non-whitelisted commands immediately. Use only in trusted environments. |
 
 ## Audit Logging
 
