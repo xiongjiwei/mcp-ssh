@@ -93,6 +93,41 @@ Every `exec` call goes through an approval gate before execution:
 | `auto_deny` (default) | Deny all non-whitelisted commands immediately. Safe for unattended use. |
 | `auto_allow` | Allow all non-whitelisted commands immediately. Use only in trusted environments. |
 
+### Custom Approval Provider
+
+Implement the `approval.Approver` interface and register it in `NewApprover`:
+
+```go
+// approval/my_approver.go
+package approval
+
+import "context"
+
+type MyApprover struct{}
+
+func (a *MyApprover) RequestApproval(ctx context.Context, user, host, command string) (bool, error) {
+    // your logic here — return (true, nil) to allow, (false, nil) to deny
+    return false, nil
+}
+```
+
+Then register it in `approval/approver.go`:
+
+```go
+func NewApprover(cfg Config) Approver {
+    switch cfg.Provider {
+    case "auto_allow":
+        return &AutoAllowApprover{}
+    case "my_approver":
+        return &MyApprover{}
+    default:
+        return &AutoDenyApprover{}
+    }
+}
+```
+
+Set `provider = "my_approver"` in `~/.mcp-ssh/config.toml` and rebuild.
+
 ## Audit Logging
 
 All events (session open/close, exec, approval requested/approved/denied) are written to:
