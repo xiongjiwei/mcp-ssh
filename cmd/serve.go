@@ -8,7 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
-	sshmcp "github.com/xiongjiwei/mcp-ssh/mcp"
+	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 var addrFlag string
@@ -35,9 +35,9 @@ var serveCmd = &cobra.Command{
 		httpSrv := server.NewStreamableHTTPServer(mcpSrv,
 			server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
 				id := r.Header.Get("Mcp-Session-Id")
-				ctx = sshmcp.WithMCPSessionID(ctx, id)
+				ctx = mcpsrv.WithMCPSessionID(ctx, id)
 				if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-					ctx = sshmcp.WithRemoteIP(ctx, ip)
+					ctx = mcpsrv.WithRemoteIP(ctx, ip)
 				}
 				return ctx
 			}),
