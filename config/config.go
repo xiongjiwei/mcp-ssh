@@ -16,8 +16,14 @@ type SessionConfig struct {
 }
 
 type ApprovalConfig struct {
-	Provider  string   `toml:"provider"`
-	Whitelist []string `toml:"whitelist"`
+	Provider  string        `toml:"provider"`
+	Whitelist []string      `toml:"whitelist"`
+	Webhook   WebhookConfig `toml:"webhook"`
+}
+
+type WebhookConfig struct {
+	TimeoutSeconds int    `toml:"timeout_seconds"`
+	TimeoutAction  string `toml:"timeout_action"`
 }
 
 type ServerConfig struct {
@@ -52,6 +58,10 @@ func Default() *Config {
 				"ls", "pwd", "cat", "echo", "grep", "find", "wc",
 				"head", "tail", "ps", "df", "du", "uname",
 				"whoami", "env", "cd",
+			},
+			Webhook: WebhookConfig{
+				TimeoutSeconds: 300,
+				TimeoutAction:  "deny",
 			},
 		},
 		Server: ServerConfig{
