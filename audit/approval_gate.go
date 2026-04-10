@@ -25,11 +25,11 @@ func NewApprovalGate(whitelist []string, approver approval.Approver) *ApprovalGa
 
 // Check returns (true, nil) if the command may execute.
 // Returns (false, nil) if denied. Returns (false, err) on approver failure.
-func (g *ApprovalGate) Check(ctx context.Context, user, host, sessionID, command string) (bool, error) {
+func (g *ApprovalGate) Check(ctx context.Context, user, host, remoteIP, sessionID, command string) (bool, error) {
 	if g.isWhitelisted(command) {
 		return true, nil
 	}
-	return g.approver.RequestApproval(ctx, user, host, command)
+	return g.approver.RequestApproval(ctx, user, host, remoteIP, command)
 }
 
 func (g *ApprovalGate) isWhitelisted(command string) bool {
