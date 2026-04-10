@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
+	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 func TestConnector_ConnectsAndSentinelAppears(t *testing.T) {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash not available")
 	}
-	conn, err := agentssh.New("bash", "", "", 5*time.Second)
+	conn, err := mcpssh.New("bash", "", "", 5*time.Second)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestConnector_ConnectsAndSentinelAppears(t *testing.T) {
 	if conn.Sentinel() == "" {
 		t.Error("sentinel must be non-empty")
 	}
-	if !strings.HasPrefix(conn.Sentinel(), "agentsh_") {
+	if !strings.HasPrefix(conn.Sentinel(), "mcpssh_") {
 		t.Errorf("sentinel wrong prefix: %s", conn.Sentinel())
 	}
 }

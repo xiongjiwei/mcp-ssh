@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/xiongjiwei/mcp-ssh/daemon"
-	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
+	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 func newTestSession(t *testing.T) *daemon.Session {
@@ -15,7 +15,7 @@ func newTestSession(t *testing.T) *daemon.Session {
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash not available")
 	}
-	conn, err := agentssh.New("bash", "", "", 5*time.Second)
+	conn, err := mcpssh.New("bash", "", "", 5*time.Second)
 	if err != nil {
 		t.Fatalf("connector: %v", err)
 	}

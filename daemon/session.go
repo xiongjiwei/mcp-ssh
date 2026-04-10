@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
+	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 var exitCodeRe = regexp.MustCompile(`EXIT_CODE:(\d+)`)
@@ -19,7 +19,7 @@ type Session struct {
 	id           string
 	user         string
 	host         string
-	conn         *agentssh.Connector
+	conn         *mcpssh.Connector
 	maxOutput    int
 	mu           sync.Mutex
 	lastActivity time.Time
@@ -27,7 +27,7 @@ type Session struct {
 	executing    bool
 }
 
-func NewSession(user, host, id string, conn *agentssh.Connector, maxOutputBytes int) *Session {
+func NewSession(user, host, id string, conn *mcpssh.Connector, maxOutputBytes int) *Session {
 	return &Session{
 		id:           id,
 		user:         user,

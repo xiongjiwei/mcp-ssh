@@ -132,5 +132,5 @@ func generateSentinel() (string, error) {
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return "agentsh_" + hex.EncodeToString(b), nil
+	return "mcpssh_" + hex.EncodeToString(b), nil
 }

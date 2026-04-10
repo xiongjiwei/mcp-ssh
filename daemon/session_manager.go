@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/xiongjiwei/mcp-ssh/config"
-	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
+	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 // SessionInfo is a snapshot of a session for status reporting.
@@ -61,7 +61,7 @@ func (sm *SessionManager) GetOrCreate(mcpSessionID, user, host string) (*Session
 	}
 
 	timeout := time.Duration(sm.cfg.Session.ConnectTimeoutSeconds) * time.Second
-	conn, err := agentssh.New(sm.sshBin, host, user, timeout)
+	conn, err := mcpssh.New(sm.sshBin, host, user, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("connect to %s: %w", host, err)
 	}
