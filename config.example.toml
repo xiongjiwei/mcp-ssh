@@ -1,5 +1,5 @@
-# agent-sh configuration
-# Copy to ~/.agent-sh/config.toml and customize as needed.
+# mcp-ssh configuration
+# Copy to ~/.mcp-ssh/config.toml and customize as needed.
 
 [session]
 idle_timeout_minutes    = 30       # Close idle SSH sessions after N minutes
@@ -8,7 +8,6 @@ command_timeout_seconds = 30       # Default timeout for command execution
 max_output_bytes        = 1048576  # Truncate command output beyond 1 MB
 
 [approval]
-# Provider for non-whitelisted commands: "auto_deny" | "iflow"
 provider = "auto_deny"
 
 # Commands allowed to execute without approval.
@@ -19,16 +18,10 @@ whitelist = [
   "whoami", "env", "cd",
 ]
 
-# iFlow approval provider configuration (used when provider = "iflow")
-[approval.iflow]
-endpoint = "https://iflow.example.com/api"
-api_key = ""                          # Your iFlow API key
-poll_period_seconds = 5               # Poll interval for approval status
-
 [server]
-# addr is the listen address for `agent-sh serve` (StreamableHTTP mode).
+# addr is the listen address for `mcp-ssh serve` (StreamableHTTP mode).
 # Overridable at runtime with --addr flag.
-addr = "127.0.0.1:7408"
+addr = ":7408"
 
 [audit]
 # max_size_mb: rotate audit.log when it exceeds this size (megabytes).

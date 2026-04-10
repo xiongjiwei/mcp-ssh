@@ -16,15 +16,8 @@ type SessionConfig struct {
 }
 
 type ApprovalConfig struct {
-	Provider  string      `toml:"provider"`
-	Whitelist []string    `toml:"whitelist"`
-	IFlow     IFlowConfig `toml:"iflow"`
-}
-
-type IFlowConfig struct {
-	Endpoint   string `toml:"endpoint"`
-	APIKey     string `toml:"api_key"`
-	PollPeriod int    `toml:"poll_period_seconds"`
+	Provider  string   `toml:"provider"`
+	Whitelist []string `toml:"whitelist"`
 }
 
 type ServerConfig struct {
@@ -62,7 +55,7 @@ func Default() *Config {
 			},
 		},
 		Server: ServerConfig{
-			Addr: "127.0.0.1:7408",
+			Addr: ":7408",
 		},
 		Audit: AuditConfig{
 			MaxSizeMB:  128,
@@ -90,7 +83,7 @@ func Load(path string) (*Config, error) {
 func DefaultPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(".agent-sh", "config.toml")
+		return filepath.Join(".mcp-ssh", "config.toml")
 	}
-	return filepath.Join(home, ".agent-sh", "config.toml")
+	return filepath.Join(home, ".mcp-ssh", "config.toml")
 }

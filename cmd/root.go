@@ -23,7 +23,7 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "agent-sh",
+	Use:   "mcp-ssh",
 	Short: "MCP server for remote shell execution via SSH",
 	// Default (no subcommand): run stdio mode.
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,7 +59,7 @@ func initDeps() error {
 	if err != nil {
 		return fmt.Errorf("home dir: %w", err)
 	}
-	dir := filepath.Join(home, ".agent-sh")
+	dir := filepath.Join(home, ".mcp-ssh")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
@@ -77,10 +77,7 @@ func initDeps() error {
 	}
 	logger := audit.New(logWriter, jsonOut)
 	approver := approval.NewApprover(approval.Config{
-		Provider:        cfg.Approval.Provider,
-		IFlowEndpoint:   cfg.Approval.IFlow.Endpoint,
-		IFlowAPIKey:     cfg.Approval.IFlow.APIKey,
-		IFlowPollPeriod: cfg.Approval.IFlow.PollPeriod,
+		Provider: cfg.Approval.Provider,
 	})
 	gate := audit.NewApprovalGate(cfg.Approval.Whitelist, approver)
 	tools := agentmcp.NewTools(sm, gate, logger, cfg, "stdio")

@@ -36,15 +36,3 @@ func TestNewApprover_UnknownProvider_FallsBackToAutoDeny(t *testing.T) {
 		t.Error("unknown provider should fall back to auto_deny")
 	}
 }
-
-func TestNewApprover_iFlowProvider(t *testing.T) {
-	a := approval.NewApprover(approval.Config{
-		Provider:      "iflow",
-		IFlowEndpoint: "https://iflow.example.com",
-	})
-	// iFlow approver is not implemented yet, should return error
-	_, err := a.RequestApproval(context.Background(), "user", "h", "cmd")
-	if err == nil {
-		t.Error("iFlow approver should return error when not implemented")
-	}
-}

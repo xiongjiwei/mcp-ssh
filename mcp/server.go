@@ -7,7 +7,7 @@ import (
 
 // NewServer creates and registers all MCP tools, returning a ready-to-serve MCPServer.
 func NewServer(tools *Tools) *server.MCPServer {
-	s := server.NewMCPServer("agent-sh", "1.0.0",
+	s := server.NewMCPServer("mcp-ssh", "1.0.0",
 		server.WithToolCapabilities(false),
 	)
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
-	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
+	sshmcp "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 var addrFlag string
@@ -25,7 +25,7 @@ var serveCmd = &cobra.Command{
 		}
 		slog.Info("serving",
 			"addr", addr,
-			"audit", "~/.agent-sh/audit.log",
+			"audit", "~/.mcp-ssh/audit.log",
 			"audit_mb", cfg.Audit.MaxSizeMB,
 			"audit_days", cfg.Audit.MaxAgeDays,
 			"approval", cfg.Approval.Provider,
@@ -35,9 +35,9 @@ var serveCmd = &cobra.Command{
 		httpSrv := server.NewStreamableHTTPServer(mcpSrv,
 			server.WithHTTPContextFunc(func(ctx context.Context, r *http.Request) context.Context {
 				id := r.Header.Get("Mcp-Session-Id")
-				ctx = agentmcp.WithMCPSessionID(ctx, id)
+				ctx = sshmcp.WithMCPSessionID(ctx, id)
 				if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-					ctx = agentmcp.WithRemoteIP(ctx, ip)
+					ctx = sshmcp.WithRemoteIP(ctx, ip)
 				}
 				return ctx
 			}),

@@ -65,8 +65,8 @@ func TestLoad_MissingFile_ReturnsDefaults(t *testing.T) {
 
 func TestDefault_ServerAddr(t *testing.T) {
 	cfg := config.Default()
-	if cfg.Server.Addr != "127.0.0.1:7408" {
-		t.Errorf("want 127.0.0.1:7408, got %s", cfg.Server.Addr)
+	if cfg.Server.Addr != ":7408" {
+		t.Errorf("want :7408, got %s", cfg.Server.Addr)
 	}
 }
 

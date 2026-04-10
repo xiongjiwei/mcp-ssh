@@ -54,7 +54,7 @@ In serve mode the server listens at `127.0.0.1:7408` by default and registers th
 
 ## Configuration
 
-Config file location: `~/.agent-sh/config.toml` (created automatically with defaults on first run).
+Config file location: `~/.mcp-ssh/config.toml` (created automatically with defaults on first run).
 
 See [`config.example.toml`](config.example.toml) for all options. Key sections:
 
@@ -69,7 +69,7 @@ command_timeout_seconds   = 30
 max_output_bytes          = 262144
 
 [approval]
-provider  = "auto_deny"   # or "iflow"
+provider  = "auto_deny"
 whitelist = ["ls", "pwd", "cat", "echo", "grep", "find",
              "wc", "head", "tail", "ps", "df", "du",
              "uname", "whoami", "env", "cd"]
@@ -91,13 +91,12 @@ Every `exec` call goes through an approval gate before execution:
 | Provider | Behavior |
 |----------|----------|
 | `auto_deny` (default) | Deny all non-whitelisted commands immediately. Safe for unattended use. |
-| `iflow` | Post to an iFlow API and poll for human approval. |
 
 ## Audit Logging
 
 All events (session open/close, exec, approval requested/approved/denied) are written to:
 
-1. **`~/.agent-sh/audit.log`** — human-readable, rotated by size and age. Each entry includes a `digest` (first 4 bytes of SHA-256 over session+command+timestamp) to correlate approval and execution events.
+1. **`~/.mcp-ssh/audit.log`** — human-readable, rotated by size and age. Each entry includes a `digest` (first 4 bytes of SHA-256 over session+command+timestamp) to correlate approval and execution events.
 
 2. **VictoriaLogs** — when `victoria_logs_url` is set, structured JSON events are shipped asynchronously. Each event includes `_msg`, `user`, `host`, `remote_ip`, `session`, `command`, `digest`, `exit_code`, `duration_ms`.
 
