@@ -74,6 +74,10 @@ whitelist = ["ls", "pwd", "cat", "echo", "grep", "find",
              "wc", "head", "tail", "ps", "df", "du",
              "uname", "whoami", "env", "cd"]
 
+[approval.webhook]
+timeout_seconds = 300   # how long to wait for an external decision
+timeout_action  = "deny" # what to do on timeout: "deny" or "allow"
+
 [audit]
 max_size_mb       = 128
 max_age_days      = 3
@@ -92,8 +96,48 @@ Every `exec` call goes through an approval gate before execution:
 |----------|----------|
 | `auto_deny` (default) | Deny all non-whitelisted commands immediately. Safe for unattended use. |
 | `auto_allow` | Allow all non-whitelisted commands immediately. Use only in trusted environments. |
+| `webhook` | Hold non-whitelisted commands for external review via HTTP long polling. |
 
-### Custom Approval Provider
+### Webhook Provider
+
+When `provider = "webhook"`, mcp-ssh exposes two HTTP endpoints on the same port as the MCP server (`serve` mode only):
+
+**`GET /approval/pending`** — long-poll for pending requests. Blocks up to 30 s if the queue is empty; returns immediately when requests are present. Call in a loop.
+
+```json
+{
+  "requests": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "user": "root",
+      "host": "prod-server",
+      "remote_ip": "192.168.1.10",
+      "command": "rm -rf /tmp/foo"
+    }
+  ]
+}
+```
+
+**`POST /approval/decision`** — submit a decision for a pending request.
+
+```json
+{"id": "550e8400-e29b-41d4-a716-446655440000", "allow": true}
+```
+
+Returns `200` on success, `404` if the ID is unknown or already timed out, `400` on bad JSON.
+
+**Timeout behaviour:** if no decision arrives within `timeout_seconds`, the command is treated according to `timeout_action` (`"deny"` or `"allow"`).
+
+**stdio mode:** the webhook provider cannot receive decisions in stdio mode. Non-whitelisted commands immediately follow `timeout_action` and a warning is logged at startup. Use `auto_deny` or `auto_allow` in stdio mode instead.
+
+```toml
+[approval]
+provider = "webhook"
+
+[approval.webhook]
+timeout_seconds = 300    # default: 300
+timeout_action  = "deny" # default: "deny"
+```
 
 Implement the `approval.Approver` interface and register it in `NewApprover`:
 
