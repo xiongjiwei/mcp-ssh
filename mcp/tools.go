@@ -66,9 +66,9 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	}
 
 	// Approval check
-	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, sess.ID(), command)
+	remoteIP := RemoteIPFromCtx(ctx)
+	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command)
 	if approvalErr != nil || !allowed {
-		remoteIP := RemoteIPFromCtx(ctx)
 		digest := t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command)
 		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command, digest)
 		return errResult("command denied by user"), nil
@@ -79,7 +79,6 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	stdout, exitCode, execErr := sess.Exec(command, time.Duration(timeoutSec)*time.Second)
 	durationMs := time.Since(start).Milliseconds()
 
-	remoteIP := RemoteIPFromCtx(ctx)
 	if execErr != nil {
 		t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, "", 1, durationMs)
 		return errResult(execErr.Error()), nil
