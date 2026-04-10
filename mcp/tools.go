@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/xiongjiwei/agent-sh/audit"
-	"github.com/xiongjiwei/agent-sh/config"
-	"github.com/xiongjiwei/agent-sh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/audit"
+	"github.com/xiongjiwei/mcp-ssh/config"
+	"github.com/xiongjiwei/mcp-ssh/daemon"
 )
 
 // Tools holds the dependencies shared by all tool handlers.

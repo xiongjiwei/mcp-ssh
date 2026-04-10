@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/xiongjiwei/agent-sh/config"
+	"github.com/xiongjiwei/mcp-ssh/config"
 )
 
 func TestDefault(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiongjiwei/agent-sh/daemon"
-	agentssh "github.com/xiongjiwei/agent-sh/ssh"
+	"github.com/xiongjiwei/mcp-ssh/daemon"
+	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 func newTestSession(t *testing.T) *daemon.Session {

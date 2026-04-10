@@ -8,7 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
-	agentmcp "github.com/xiongjiwei/agent-sh/mcp"
+	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 var addrFlag string

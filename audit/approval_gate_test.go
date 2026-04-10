@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/xiongjiwei/agent-sh/approval"
-	"github.com/xiongjiwei/agent-sh/audit"
+	"github.com/xiongjiwei/mcp-ssh/approval"
+	"github.com/xiongjiwei/mcp-ssh/audit"
 )
 
 func gate(whitelist []string) *audit.ApprovalGate {

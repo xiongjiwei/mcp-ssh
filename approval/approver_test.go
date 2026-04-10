@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/xiongjiwei/agent-sh/approval"
+	"github.com/xiongjiwei/mcp-ssh/approval"
 )
 
 func TestAutoDenyApprover_AlwaysDenies(t *testing.T) {

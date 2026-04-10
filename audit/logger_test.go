@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xiongjiwei/agent-sh/audit"
+	"github.com/xiongjiwei/mcp-ssh/audit"
 )
 
 func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {

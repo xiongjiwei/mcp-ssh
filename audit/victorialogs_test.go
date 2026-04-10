@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiongjiwei/agent-sh/audit"
+	"github.com/xiongjiwei/mcp-ssh/audit"
 )
 
 func TestVictoriaLogsWriter_SendsData(t *testing.T) {

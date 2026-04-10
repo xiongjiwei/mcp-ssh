@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xiongjiwei/agent-sh/config"
-	agentssh "github.com/xiongjiwei/agent-sh/ssh"
+	"github.com/xiongjiwei/mcp-ssh/config"
+	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 // SessionInfo is a snapshot of a session for status reporting.

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiongjiwei/agent-sh/config"
-	"github.com/xiongjiwei/agent-sh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/config"
+	"github.com/xiongjiwei/mcp-ssh/daemon"
 )
 
 func newTestSM(t *testing.T) *daemon.SessionManager {

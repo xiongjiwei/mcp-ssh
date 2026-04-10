@@ -9,11 +9,11 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"github.com/xiongjiwei/agent-sh/approval"
-	"github.com/xiongjiwei/agent-sh/audit"
-	"github.com/xiongjiwei/agent-sh/config"
-	"github.com/xiongjiwei/agent-sh/daemon"
-	agentmcp "github.com/xiongjiwei/agent-sh/mcp"
+	"github.com/xiongjiwei/mcp-ssh/approval"
+	"github.com/xiongjiwei/mcp-ssh/audit"
+	"github.com/xiongjiwei/mcp-ssh/config"
+	"github.com/xiongjiwei/mcp-ssh/daemon"
+	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 var (

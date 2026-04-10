@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	agentmcp "github.com/xiongjiwei/agent-sh/mcp"
+	agentmcp "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
 func TestMCPSessionID_RoundTrip(t *testing.T) {

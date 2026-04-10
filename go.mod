@@ -1,4 +1,4 @@
-module github.com/xiongjiwei/agent-sh
+module github.com/xiongjiwei/mcp-ssh
 
 go 1.25.0
 

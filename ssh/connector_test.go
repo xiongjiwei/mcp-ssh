@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	agentssh "github.com/xiongjiwei/agent-sh/ssh"
+	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 func TestConnector_ConnectsAndSentinelAppears(t *testing.T) {

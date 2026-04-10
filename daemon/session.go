@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	agentssh "github.com/xiongjiwei/agent-sh/ssh"
+	agentssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
 var exitCodeRe = regexp.MustCompile(`EXIT_CODE:(\d+)`)

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/xiongjiwei/agent-sh/approval"
+	"github.com/xiongjiwei/mcp-ssh/approval"
 )
 
 // ApprovalGate checks commands against a whitelist, then calls the Approver
