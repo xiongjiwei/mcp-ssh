@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -105,7 +106,7 @@ func TestWebhook_CtxCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		ok, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "")
+		ok, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "ctxtest")
 		if err == nil {
 			t.Errorf("expected ctx error, got nil (ok=%v)", ok)
 		}
@@ -147,16 +148,15 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 		}
 		var body struct {
 			Requests []struct {
-				ID     string `json:"id"`
-				Digest string `json:"digest"`
+				ID string `json:"id"`
 			} `json:"requests"`
 		}
 		json.NewDecoder(resp.Body).Decode(&body)
 		resp.Body.Close()
 		if len(body.Requests) > 0 {
 			id = body.Requests[0].ID
-			if body.Requests[0].Digest != "deadbeef" {
-				t.Errorf("expected digest=deadbeef, got %q", body.Requests[0].Digest)
+			if id != "deadbeef" {
+				t.Errorf("expected id=deadbeef (digest), got %q", id)
 			}
 			break
 		}
@@ -194,7 +194,7 @@ func TestWebhook_DecisionDeny(t *testing.T) {
 
 	result := make(chan bool, 1)
 	go func() {
-		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "")
+		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "denytest")
 		result <- ok
 	}()
 
@@ -294,7 +294,6 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 			Host     string `json:"host"`
 			RemoteIP string `json:"remote_ip"`
 			Command  string `json:"command"`
-			Digest   string `json:"digest"`
 		} `json:"requests"`
 	}
 	json.NewDecoder(resp.Body).Decode(&body)
@@ -307,8 +306,8 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 	if r.User != "u" || r.Host != "h" || r.RemoteIP != "ip" || r.Command != "cmd" {
 		t.Errorf("unexpected request fields: %+v", r)
 	}
-	if r.Digest != "dg1" {
-		t.Errorf("expected digest=dg1, got %q", r.Digest)
+	if r.ID != "dg1" {
+		t.Errorf("expected id=dg1 (digest), got %q", r.ID)
 	}
 }
 
@@ -327,7 +326,7 @@ func TestWebhook_Concurrent(t *testing.T) {
 	// Launch n concurrent approval requests
 	for i := 0; i < n; i++ {
 		go func() {
-			ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "")
+			ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", fmt.Sprintf("dg%d", i))
 			results <- ok
 		}()
 	}

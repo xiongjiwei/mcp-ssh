@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // pendingRequest holds an in-flight approval request waiting for an external decision.
@@ -17,7 +15,6 @@ type pendingRequest struct {
 	Host     string
 	RemoteIP string
 	Command  string
-	Digest   string
 	result   chan bool // buffered(1); written exactly once
 }
 
@@ -41,20 +38,18 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 		return a.onTimeout, nil
 	}
 
-	id := uuid.New().String()
 	req := &pendingRequest{
-		ID:       id,
+		ID:       digest,
 		User:     user,
 		Host:     host,
 		RemoteIP: remoteIP,
 		Command:  command,
-		Digest:   digest,
 		result:   make(chan bool, 1),
 	}
 
 	// Register and broadcast under the same lock so long-poll waiters never miss it.
 	a.mu.Lock()
-	a.pending[id] = req
+	a.pending[digest] = req
 	old := a.notify
 	a.notify = make(chan struct{})
 	a.mu.Unlock()
@@ -68,12 +63,12 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 	case <-ctx.Done():
 		t.Stop()
 		a.mu.Lock()
-		delete(a.pending, id)
+		delete(a.pending, digest)
 		a.mu.Unlock()
 		return false, ctx.Err()
 	case <-t.C:
 		a.mu.Lock()
-		delete(a.pending, id)
+		delete(a.pending, digest)
 		a.mu.Unlock()
 		return a.onTimeout, nil
 	}
@@ -87,13 +82,14 @@ func (a *WebhookApprover) RegisterHandlers(mux *http.ServeMux) {
 }
 
 // pendingItem is the JSON shape returned by GET /approval/pending.
+// ID doubles as the audit digest — use it to correlate with audit log entries
+// and as the key for POST /approval/decision.
 type pendingItem struct {
 	ID       string `json:"id"`
 	User     string `json:"user"`
 	Host     string `json:"host"`
 	RemoteIP string `json:"remote_ip"`
 	Command  string `json:"command"`
-	Digest   string `json:"digest"`
 }
 
 // pendingResponse is the top-level JSON envelope.
@@ -111,7 +107,6 @@ func (a *WebhookApprover) snapshot() []pendingItem {
 			Host:     r.Host,
 			RemoteIP: r.RemoteIP,
 			Command:  r.Command,
-			Digest:   r.Digest,
 		})
 	}
 	return items
