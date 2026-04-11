@@ -35,13 +35,8 @@ func (g *Gate) Check(ctx context.Context, user, host, remoteIP, sessionID, comma
 	g.logger.LogApprovalRequested(remoteIP, user, host, sessionID, command, digest)
 
 	dec, err := g.approver.RequestApproval(ctx, user, host, remoteIP, command, digest)
-	if err != nil || !dec.Allow {
-		g.logger.LogApprovalDenied(remoteIP, user, host, sessionID, command, digest, dec.Reason)
-		return dec, err
-	}
-
-	g.logger.LogApprovalApproved(remoteIP, user, host, sessionID, command, digest, dec.Reason)
-	return dec, nil
+	g.logger.LogApprovalDecision(remoteIP, user, host, sessionID, command, digest, dec.Reason, dec.Allow && err == nil)
+	return dec, err
 }
 
 func (g *Gate) isWhitelisted(command string) bool {
