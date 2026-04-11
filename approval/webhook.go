@@ -17,6 +17,7 @@ type pendingRequest struct {
 	Host     string
 	RemoteIP string
 	Command  string
+	Digest   string
 	result   chan bool // buffered(1); written exactly once
 }
 
@@ -34,7 +35,7 @@ type WebhookApprover struct {
 
 // RequestApproval blocks until an external decision arrives, the context is
 // cancelled, or the timeout elapses.
-func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command string) (bool, error) {
+func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (bool, error) {
 	// stdio fast-path: no HTTP server, return configured timeout action immediately.
 	if a.transport == "stdio" {
 		return a.onTimeout, nil
@@ -47,6 +48,7 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 		Host:     host,
 		RemoteIP: remoteIP,
 		Command:  command,
+		Digest:   digest,
 		result:   make(chan bool, 1),
 	}
 
@@ -91,6 +93,7 @@ type pendingItem struct {
 	Host     string `json:"host"`
 	RemoteIP string `json:"remote_ip"`
 	Command  string `json:"command"`
+	Digest   string `json:"digest"`
 }
 
 // pendingResponse is the top-level JSON envelope.
@@ -108,6 +111,7 @@ func (a *WebhookApprover) snapshot() []pendingItem {
 			Host:     r.Host,
 			RemoteIP: r.RemoteIP,
 			Command:  r.Command,
+			Digest:   r.Digest,
 		})
 	}
 	return items

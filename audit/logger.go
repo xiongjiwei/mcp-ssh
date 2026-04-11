@@ -18,9 +18,8 @@ func New(logWriter io.Writer, jsonOut io.Writer) *Logger {
 	return &Logger{logWriter: logWriter, eventSink: jsonOut}
 }
 
-func (l *Logger) LogExec(remoteIP, user, host, sessionID, command, stdout string, exitCode int, durationMs int64) {
+func (l *Logger) LogExec(remoteIP, user, host, sessionID, command, stdout, digest string, exitCode int, durationMs int64) {
 	ts := now()
-	digest := cmdDigest(sessionID, command, ts)
 	oneLine := strings.ReplaceAll(strings.TrimRight(stdout, "\n"), "\n", `\n`)
 	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] EXEC: %s EXIT:%d duration:%dms OUT:%s\n", ts, remoteIP, user, host, sessionID, digest, command, exitCode, durationMs, oneLine))
 	l.publishEvent(map[string]any{
@@ -51,16 +50,14 @@ func (l *Logger) LogClose(remoteIP, user, host, sessionID string) {
 	})
 }
 
-func (l *Logger) LogApprovalRequested(remoteIP, user, host, sessionID, command string) string {
+func (l *Logger) LogApprovalRequested(remoteIP, user, host, sessionID, command, digest string) {
 	ts := now()
-	digest := cmdDigest(sessionID, command, ts)
 	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: REQUESTED %s\n", ts, remoteIP, user, host, sessionID, digest, command))
 	l.publishEvent(map[string]any{
 		"_msg": fmt.Sprintf("%s@%s approval requested: `%s`", user, host, command),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
 		"event": "approval_requested", "command": command, "digest": digest,
 	})
-	return digest
 }
 
 func (l *Logger) LogApprovalApproved(remoteIP, user, host, sessionID, command, digest string, exitCode int, durationMs int64) {
@@ -95,6 +92,14 @@ func (l *Logger) publishEvent(v any) {
 
 func now() string {
 	return time.Now().UTC().Format(time.RFC3339)
+}
+
+// CmdDigest returns a short (4-byte hex) digest that correlates audit log
+// entries for the same command: approval_requested, approval_approved/denied,
+// and exec all share the same digest.
+func CmdDigest(sessionID, command string) string {
+	ts := now()
+	return cmdDigest(sessionID, command, ts)
 }
 
 func cmdDigest(sessionID, command, ts string) string {

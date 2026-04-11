@@ -48,7 +48,7 @@ func TestWebhook_StdioWarningLogged(t *testing.T) {
 
 func TestWebhook_StdioFastPath_Deny(t *testing.T) {
 	wa := newWebhook("stdio", 300, "deny")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /")
+	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestWebhook_StdioFastPath_Deny(t *testing.T) {
 
 func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 	wa := newWebhook("stdio", 300, "allow")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /")
+	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 func TestWebhook_Timeout_Deny(t *testing.T) {
 	wa := newWebhook("serve", 1, "deny")
 	start := time.Now()
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd")
+	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
 	elapsed := time.Since(start)
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestWebhook_Timeout_Deny(t *testing.T) {
 
 func TestWebhook_Timeout_Allow(t *testing.T) {
 	wa := newWebhook("serve", 1, "allow")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd")
+	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +105,7 @@ func TestWebhook_CtxCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		ok, err := wa.RequestApproval(ctx, "u", "h", "", "cmd")
+		ok, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "")
 		if err == nil {
 			t.Errorf("expected ctx error, got nil (ok=%v)", ok)
 		}
@@ -133,7 +133,7 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 
 	result := make(chan bool, 1)
 	go func() {
-		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "cmd")
+		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "cmd", "deadbeef")
 		result <- ok
 	}()
 
@@ -147,13 +147,17 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 		}
 		var body struct {
 			Requests []struct {
-				ID string `json:"id"`
+				ID     string `json:"id"`
+				Digest string `json:"digest"`
 			} `json:"requests"`
 		}
 		json.NewDecoder(resp.Body).Decode(&body)
 		resp.Body.Close()
 		if len(body.Requests) > 0 {
 			id = body.Requests[0].ID
+			if body.Requests[0].Digest != "deadbeef" {
+				t.Errorf("expected digest=deadbeef, got %q", body.Requests[0].Digest)
+			}
 			break
 		}
 	}
@@ -190,7 +194,7 @@ func TestWebhook_DecisionDeny(t *testing.T) {
 
 	result := make(chan bool, 1)
 	go func() {
-		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd")
+		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "")
 		result <- ok
 	}()
 
@@ -279,7 +283,7 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 	defer srv.Close()
 
 	// Put a request in flight
-	go wa.RequestApproval(context.Background(), "u", "h", "ip", "cmd") //nolint
+	go wa.RequestApproval(context.Background(), "u", "h", "ip", "cmd", "dg1") //nolint
 	time.Sleep(20 * time.Millisecond)
 
 	resp, _ := http.Get(srv.URL + "/approval/pending")
@@ -290,6 +294,7 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 			Host     string `json:"host"`
 			RemoteIP string `json:"remote_ip"`
 			Command  string `json:"command"`
+			Digest   string `json:"digest"`
 		} `json:"requests"`
 	}
 	json.NewDecoder(resp.Body).Decode(&body)
@@ -301,6 +306,9 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 	r := body.Requests[0]
 	if r.User != "u" || r.Host != "h" || r.RemoteIP != "ip" || r.Command != "cmd" {
 		t.Errorf("unexpected request fields: %+v", r)
+	}
+	if r.Digest != "dg1" {
+		t.Errorf("expected digest=dg1, got %q", r.Digest)
 	}
 }
 
@@ -319,7 +327,7 @@ func TestWebhook_Concurrent(t *testing.T) {
 	// Launch n concurrent approval requests
 	for i := 0; i < n; i++ {
 		go func() {
-			ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd")
+			ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "")
 			results <- ok
 		}()
 	}

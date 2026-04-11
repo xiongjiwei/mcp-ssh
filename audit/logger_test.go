@@ -26,7 +26,7 @@ func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
 
 func TestLogger_Exec(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogExec("1.2.3.4", "alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", 0, 42)
+	l.LogExec("1.2.3.4", "alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", "deadbeef", 0, 42)
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "EXEC: ls /tmp") {
@@ -53,7 +53,7 @@ func TestLogger_Exec(t *testing.T) {
 
 func TestLogger_ApprovalCycle(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogApprovalRequested("1.2.3.4", "alice", "srv1", "s1", "rm -rf /")
+	l.LogApprovalRequested("1.2.3.4", "alice", "srv1", "s1", "rm -rf /", "deadbeef")
 	l.LogApprovalDenied("1.2.3.4", "alice", "srv1", "s1", "rm -rf /", "deadbeef")
 
 	content, _ := os.ReadFile(logPath)

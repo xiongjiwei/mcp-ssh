@@ -10,8 +10,9 @@ import (
 type Approver interface {
 	// RequestApproval returns (true, nil) to allow, (false, nil) to deny,
 	// or (false, err) if the approval mechanism itself failed.
+	// digest is the audit digest that correlates this request with its exec log entry.
 	// Implementations must respect ctx.Done() and return promptly on cancellation.
-	RequestApproval(ctx context.Context, user, host, remoteIP, command string) (bool, error)
+	RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (bool, error)
 }
 
 // WebhookConfig holds webhook-specific settings (mirrors config.WebhookConfig
