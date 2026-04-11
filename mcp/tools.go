@@ -69,14 +69,10 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	// Approval check
 	remoteIP := RemoteIPFromCtx(ctx)
 	digest := audit.CmdDigest(sess.ID(), command)
-	t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command, digest)
 	dec, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command, digest)
 	if approvalErr != nil || !dec.Allow {
-		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason)
 		return errResult("command denied by user"), nil
 	}
-
-	t.logger.LogApprovalApproved(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason)
 
 	// Execute
 	start := time.Now()

@@ -20,7 +20,7 @@ func newTestTools(t *testing.T) *mcpsrv.Tools {
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(io.Discard, &bytes.Buffer{})
-	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
+	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}), logger)
 	return mcpsrv.NewTools(sm, gate, logger, cfg, "stdio")
 }
 
@@ -135,7 +135,7 @@ func TestTools_Isolation_AgentCannotSeeOtherSession(t *testing.T) {
 	cfg := config.Default()
 	sm := daemon.NewSessionManager(cfg, "bash")
 	logger := audit.New(io.Discard, &bytes.Buffer{})
-	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
+	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}), logger)
 
 	toolsA := mcpsrv.NewTools(sm, gate, logger, cfg, "agent-a")
 	toolsB := mcpsrv.NewTools(sm, gate, logger, cfg, "agent-b")

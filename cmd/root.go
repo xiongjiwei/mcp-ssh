@@ -86,7 +86,7 @@ func initDeps(transport string) error {
 			TimeoutAction:  cfg.Approval.Webhook.TimeoutAction,
 		},
 	})
-	gate := approval.NewGate(cfg.Approval.Whitelist, approver)
+	gate := approval.NewGate(cfg.Approval.Whitelist, approver, logger)
 	tools := mcpsrv.NewTools(sm, gate, logger, cfg, transport)
 	mcpSrv = mcpsrv.NewServer(tools)
 	return nil
