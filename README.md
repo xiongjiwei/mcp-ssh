@@ -108,7 +108,7 @@ When `provider = "webhook"`, mcp-ssh exposes two HTTP endpoints on the same port
 {
   "requests": [
     {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "id": "a3f2c1e0b4d5e6f7a8b9c0d1e2f3a4b5",
       "user": "root",
       "host": "prod-server",
       "remote_ip": "192.168.1.10",
@@ -118,11 +118,15 @@ When `provider = "webhook"`, mcp-ssh exposes two HTTP endpoints on the same port
 }
 ```
 
+The `id` is the audit digest for this command (32 hex chars / 16 bytes of SHA-256 over session+command+timestamp). It correlates the pending request with the `approval_requested`, `approval_approved`/`approval_denied`, and `exec` entries in the audit log.
+
 **`POST /approval/decision`** — submit a decision for a pending request.
 
 ```json
-{"id": "550e8400-e29b-41d4-a716-446655440000", "allow": true}
+{"id": "a3f2c1e0b4d5e6f7a8b9c0d1e2f3a4b5", "allow": true, "reason": "looks safe"}
 ```
+
+`reason` is optional and is recorded in the audit log.
 
 Returns `200` on success, `404` if the ID is unknown or already timed out, `400` on bad JSON.
 
@@ -149,9 +153,10 @@ import "context"
 
 type MyApprover struct{}
 
-func (a *MyApprover) RequestApproval(ctx context.Context, user, host, command string) (bool, error) {
-    // your logic here — return (true, nil) to allow, (false, nil) to deny
-    return false, nil
+func (a *MyApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (Decision, error) {
+    // Return Decision{Allow: true} to allow, Decision{Allow: false} to deny.
+    // digest correlates this request with its audit log entries.
+    return Decision{Allow: false}, nil
 }
 ```
 
@@ -176,7 +181,7 @@ Set `provider = "my_approver"` in `~/.mcp-ssh/config.toml` and rebuild.
 
 All events (session open/close, exec, approval requested/approved/denied) are written to:
 
-1. **`~/.mcp-ssh/audit.log`** — human-readable, rotated by size and age. Each entry includes a `digest` (first 4 bytes of SHA-256 over session+command+timestamp) to correlate approval and execution events.
+1. **`~/.mcp-ssh/audit.log`** — human-readable, rotated by size and age. Each entry includes a `digest` (16 bytes / 32 hex chars of SHA-256 over session+command+timestamp) that correlates the `approval_requested`, decision, and `exec` entries for the same command.
 
 2. **VictoriaLogs** — when `victoria_logs_url` is set, structured JSON events are shipped asynchronously. Each event includes `_msg`, `user`, `host`, `remote_ip`, `session`, `command`, `digest`, `exit_code`, `duration_ms`.
 
