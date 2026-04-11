@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
 	"github.com/xiongjiwei/mcp-ssh/daemon"
@@ -15,7 +16,7 @@ import (
 // Tools holds the dependencies shared by all tool handlers.
 type Tools struct {
 	sm             *daemon.SessionManager
-	gate           *audit.ApprovalGate
+	gate           *approval.Gate
 	logger         *audit.Logger
 	cfg            *config.Config
 	stdioSessionID string
@@ -24,7 +25,7 @@ type Tools struct {
 // NewTools constructs Tools. stdioSessionID is used when no MCP session ID is
 // present in the context (stdio mode). Pass "stdio" for stdio mode, "" for
 // serve mode (the context always carries the ID in serve mode).
-func NewTools(sm *daemon.SessionManager, gate *audit.ApprovalGate, logger *audit.Logger, cfg *config.Config, stdioSessionID string) *Tools {
+func NewTools(sm *daemon.SessionManager, gate *approval.Gate, logger *audit.Logger, cfg *config.Config, stdioSessionID string) *Tools {
 	return &Tools{sm: sm, gate: gate, logger: logger, cfg: cfg, stdioSessionID: stdioSessionID}
 }
 

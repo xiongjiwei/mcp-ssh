@@ -1,15 +1,14 @@
-package audit_test
+package approval_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/xiongjiwei/mcp-ssh/approval"
-	"github.com/xiongjiwei/mcp-ssh/audit"
 )
 
-func gate(whitelist []string) *audit.ApprovalGate {
-	return audit.NewApprovalGate(whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
+func gate(whitelist []string) *approval.Gate {
+	return approval.NewGate(whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}))
 }
 
 func TestGate_Whitelisted_NoApprovalNeeded(t *testing.T) {
