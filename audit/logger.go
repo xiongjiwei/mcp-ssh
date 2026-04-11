@@ -104,5 +104,5 @@ func CmdDigest(sessionID, command string) string {
 
 func cmdDigest(sessionID, command, ts string) string {
 	h := sha256.Sum256([]byte(sessionID + command + ts))
-	return fmt.Sprintf("%x", h[:4])
+	return fmt.Sprintf("%x", h[:16])
 }
