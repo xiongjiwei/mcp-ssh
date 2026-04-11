@@ -49,22 +49,22 @@ func TestWebhook_StdioWarningLogged(t *testing.T) {
 
 func TestWebhook_StdioFastPath_Deny(t *testing.T) {
 	wa := newWebhook("stdio", 300, "deny")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
+	dec, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ok {
+	if dec.Allow {
 		t.Error("stdio fast-path with action=deny should return false")
 	}
 }
 
 func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 	wa := newWebhook("stdio", 300, "allow")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
+	dec, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok {
+	if !dec.Allow {
 		t.Error("stdio fast-path with action=allow should return true")
 	}
 }
@@ -74,12 +74,12 @@ func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 func TestWebhook_Timeout_Deny(t *testing.T) {
 	wa := newWebhook("serve", 1, "deny")
 	start := time.Now()
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
+	dec, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
 	elapsed := time.Since(start)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ok {
+	if dec.Allow {
 		t.Error("should deny on timeout")
 	}
 	if elapsed < 900*time.Millisecond {
@@ -89,11 +89,11 @@ func TestWebhook_Timeout_Deny(t *testing.T) {
 
 func TestWebhook_Timeout_Allow(t *testing.T) {
 	wa := newWebhook("serve", 1, "allow")
-	ok, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
+	dec, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok {
+	if !dec.Allow {
 		t.Error("should allow on timeout when action=allow")
 	}
 }
@@ -106,11 +106,11 @@ func TestWebhook_CtxCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		ok, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "ctxtest")
+		dec, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "ctxtest")
 		if err == nil {
-			t.Errorf("expected ctx error, got nil (ok=%v)", ok)
+			t.Errorf("expected ctx error, got nil (allow=%v)", dec.Allow)
 		}
-		if ok {
+		if dec.Allow {
 			t.Error("should not allow on ctx cancel")
 		}
 	}()
@@ -132,10 +132,10 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	result := make(chan bool, 1)
+	result := make(chan approval.Decision, 1)
 	go func() {
-		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "cmd", "deadbeef")
-		result <- ok
+		dec, _ := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "cmd", "deadbeef")
+		result <- dec
 	}()
 
 	// Wait for request to be pending
@@ -165,8 +165,8 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 		t.Fatal("no pending request appeared")
 	}
 
-	dec, _ := json.Marshal(map[string]any{"id": id, "allow": true})
-	resp, err := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(dec))
+	body, _ := json.Marshal(map[string]any{"id": id, "allow": true, "reason": "looks safe"})
+	resp, err := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,9 +176,12 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 	}
 
 	select {
-	case ok := <-result:
-		if !ok {
+	case dec := <-result:
+		if !dec.Allow {
 			t.Error("expected allow")
+		}
+		if dec.Reason != "looks safe" {
+			t.Errorf("expected reason='looks safe', got %q", dec.Reason)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("RequestApproval did not return")
@@ -192,10 +195,10 @@ func TestWebhook_DecisionDeny(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	result := make(chan bool, 1)
+	result := make(chan approval.Decision, 1)
 	go func() {
-		ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "denytest")
-		result <- ok
+		dec, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "denytest")
+		result <- dec
 	}()
 
 	var id string
@@ -216,13 +219,16 @@ func TestWebhook_DecisionDeny(t *testing.T) {
 		t.Fatal("no pending request")
 	}
 
-	dec, _ := json.Marshal(map[string]any{"id": id, "allow": false})
-	http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(dec))
+	body, _ := json.Marshal(map[string]any{"id": id, "allow": false, "reason": "too dangerous"})
+	http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(body))
 
 	select {
-	case ok := <-result:
-		if ok {
+	case dec := <-result:
+		if dec.Allow {
 			t.Error("expected deny")
+		}
+		if dec.Reason != "too dangerous" {
+			t.Errorf("expected reason='too dangerous', got %q", dec.Reason)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout")
@@ -238,8 +244,8 @@ func TestWebhook_Decision_UnknownID(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	dec, _ := json.Marshal(map[string]any{"id": "nonexistent", "allow": true})
-	resp, _ := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(dec))
+	body, _ := json.Marshal(map[string]any{"id": "nonexistent", "allow": true})
+	resp, _ := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(body))
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", resp.StatusCode)
@@ -253,8 +259,8 @@ func TestWebhook_Decision_EmptyID(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	dec, _ := json.Marshal(map[string]any{"id": "", "allow": true})
-	resp, _ := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(dec))
+	body, _ := json.Marshal(map[string]any{"id": "", "allow": true})
+	resp, _ := http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(body))
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("empty id should be 404, got %d", resp.StatusCode)
@@ -282,7 +288,6 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	// Put a request in flight
 	go wa.RequestApproval(context.Background(), "u", "h", "ip", "cmd", "dg1") //nolint
 	time.Sleep(20 * time.Millisecond)
 
@@ -321,17 +326,16 @@ func TestWebhook_Concurrent(t *testing.T) {
 	defer srv.Close()
 
 	const n = 5
-	results := make(chan bool, n)
+	results := make(chan approval.Decision, n)
 
-	// Launch n concurrent approval requests
 	for i := 0; i < n; i++ {
+		i := i
 		go func() {
-			ok, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", fmt.Sprintf("dg%d", i))
-			results <- ok
+			dec, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", fmt.Sprintf("dg%d", i))
+			results <- dec
 		}()
 	}
 
-	// Poll and approve all
 	approved := 0
 	deadline := time.Now().Add(4 * time.Second)
 	for approved < n && time.Now().Before(deadline) {
@@ -349,14 +353,13 @@ func TestWebhook_Concurrent(t *testing.T) {
 		resp.Body.Close()
 
 		for _, req := range body.Requests {
-			dec, _ := json.Marshal(map[string]any{"id": req.ID, "allow": true})
-			http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(dec)) //nolint
+			b, _ := json.Marshal(map[string]any{"id": req.ID, "allow": true})
+			http.Post(srv.URL+"/approval/decision", "application/json", bytes.NewReader(b)) //nolint
 			approved++
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Collect results (remaining may timeout to deny)
 	for i := 0; i < n; i++ {
 		select {
 		case <-results:

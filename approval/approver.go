@@ -6,13 +6,19 @@ import (
 	"time"
 )
 
+// Decision holds the outcome of an approval request.
+type Decision struct {
+	Allow  bool
+	Reason string // human-readable explanation, may be empty
+}
+
 // Approver decides whether a command is allowed to execute.
 type Approver interface {
-	// RequestApproval returns (true, nil) to allow, (false, nil) to deny,
-	// or (false, err) if the approval mechanism itself failed.
+	// RequestApproval returns a Decision and nil on success, or a zero Decision
+	// and non-nil error on failure. Implementations must respect ctx.Done() and
+	// return promptly on cancellation.
 	// digest is the audit digest that correlates this request with its exec log entry.
-	// Implementations must respect ctx.Done() and return promptly on cancellation.
-	RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (bool, error)
+	RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (Decision, error)
 }
 
 // WebhookConfig holds webhook-specific settings (mirrors config.WebhookConfig

@@ -14,43 +14,43 @@ func gate(whitelist []string) *audit.ApprovalGate {
 
 func TestGate_Whitelisted_NoApprovalNeeded(t *testing.T) {
 	g := gate([]string{"ls", "grep", "cat"})
-	ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls -la /etc", "")
-	if err != nil || !ok {
-		t.Errorf("whitelisted command should pass: ok=%v err=%v", ok, err)
+	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls -la /etc", "")
+	if err != nil || !dec.Allow {
+		t.Errorf("whitelisted command should pass: ok=%v err=%v", dec.Allow, err)
 	}
 }
 
 func TestGate_PathNormalized(t *testing.T) {
 	g := gate([]string{"ls"})
-	ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "/bin/ls -la", "")
-	if err != nil || !ok {
-		t.Errorf("/bin/ls should normalize to ls: ok=%v err=%v", ok, err)
+	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "/bin/ls -la", "")
+	if err != nil || !dec.Allow {
+		t.Errorf("/bin/ls should normalize to ls: ok=%v err=%v", dec.Allow, err)
 	}
 }
 
 func TestGate_NotWhitelisted_AutoDeny(t *testing.T) {
 	g := gate([]string{"ls"})
-	ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "rm -rf /data", "")
+	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "rm -rf /data", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if ok {
+	if dec.Allow {
 		t.Error("rm should be denied by AutoDenyApprover")
 	}
 }
 
 func TestGate_CompoundAllWhitelisted(t *testing.T) {
 	g := gate([]string{"ls", "grep"})
-	ok, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp | grep foo", "")
-	if !ok {
+	dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp | grep foo", "")
+	if !dec.Allow {
 		t.Error("both tokens whitelisted, should pass")
 	}
 }
 
 func TestGate_CompoundOneNotWhitelisted(t *testing.T) {
 	g := gate([]string{"ls"})
-	ok, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp && rm -rf /", "")
-	if ok {
+	dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp && rm -rf /", "")
+	if dec.Allow {
 		t.Error("rm not whitelisted, should deny")
 	}
 }
@@ -63,8 +63,8 @@ func TestGate_AmbiguousPattern_Deny(t *testing.T) {
 		"{ ls; echo done; }",
 	}
 	for _, c := range cases {
-		ok, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", c, "")
-		if ok {
+		dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", c, "")
+		if dec.Allow {
 			t.Errorf("ambiguous command should require approval (denied by auto_deny): %q", c)
 		}
 	}
@@ -112,12 +112,12 @@ func TestGate_DefaultWhitelist(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}
@@ -147,12 +147,12 @@ func TestGate_QuotedCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}
@@ -189,12 +189,12 @@ func TestGate_CompoundCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}
@@ -229,12 +229,12 @@ func TestGate_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}
@@ -261,12 +261,12 @@ func TestGate_AmbiguousPatterns(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}
@@ -296,12 +296,12 @@ func TestGate_ComplexShellConstructs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			ok, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if ok != tt.want {
-				t.Errorf("command %q: got ok=%v, want %v", tt.command, ok, tt.want)
+			if dec.Allow != tt.want {
+				t.Errorf("command %q: got ok=%v, want %v", tt.command, dec.Allow, tt.want)
 			}
 		})
 	}

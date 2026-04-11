@@ -60,25 +60,33 @@ func (l *Logger) LogApprovalRequested(remoteIP, user, host, sessionID, command, 
 	})
 }
 
-func (l *Logger) LogApprovalApproved(remoteIP, user, host, sessionID, command, digest string, exitCode int, durationMs int64) {
+func (l *Logger) LogApprovalApproved(remoteIP, user, host, sessionID, command, digest, reason string, exitCode int, durationMs int64) {
 	ts := now()
 	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: APPROVED %s\n", ts, remoteIP, user, host, sessionID, digest, command))
-	l.publishEvent(map[string]any{
+	ev := map[string]any{
 		"_msg": fmt.Sprintf("%s@%s approval approved: `%s`", user, host, command),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
 		"event": "approval_approved", "command": command, "digest": digest,
 		"exit_code": exitCode, "duration_ms": durationMs,
-	})
+	}
+	if reason != "" {
+		ev["reason"] = reason
+	}
+	l.publishEvent(ev)
 }
 
-func (l *Logger) LogApprovalDenied(remoteIP, user, host, sessionID, command, digest string) {
+func (l *Logger) LogApprovalDenied(remoteIP, user, host, sessionID, command, digest, reason string) {
 	ts := now()
 	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: DENIED by user\n", ts, remoteIP, user, host, sessionID, digest))
-	l.publishEvent(map[string]any{
+	ev := map[string]any{
 		"_msg": fmt.Sprintf("%s@%s approval denied: `%s`", user, host, command),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
 		"event": "approval_denied", "command": command, "digest": digest,
-	})
+	}
+	if reason != "" {
+		ev["reason"] = reason
+	}
+	l.publishEvent(ev)
 }
 
 func (l *Logger) appendFile(line string) {

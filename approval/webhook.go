@@ -15,7 +15,7 @@ type pendingRequest struct {
 	Host     string
 	RemoteIP string
 	Command  string
-	result   chan bool // buffered(1); written exactly once
+	result   chan Decision // buffered(1); written exactly once
 }
 
 // WebhookApprover implements Approver via HTTP long polling.
@@ -32,10 +32,10 @@ type WebhookApprover struct {
 
 // RequestApproval blocks until an external decision arrives, the context is
 // cancelled, or the timeout elapses.
-func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (bool, error) {
+func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (Decision, error) {
 	// stdio fast-path: no HTTP server, return configured timeout action immediately.
 	if a.transport == "stdio" {
-		return a.onTimeout, nil
+		return Decision{Allow: a.onTimeout}, nil
 	}
 
 	req := &pendingRequest{
@@ -44,7 +44,7 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 		Host:     host,
 		RemoteIP: remoteIP,
 		Command:  command,
-		result:   make(chan bool, 1),
+		result:   make(chan Decision, 1),
 	}
 
 	// Register and broadcast under the same lock so long-poll waiters never miss it.
@@ -57,20 +57,20 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 
 	t := time.NewTimer(a.timeout)
 	select {
-	case v := <-req.result:
+	case d := <-req.result:
 		t.Stop()
-		return v, nil
+		return d, nil
 	case <-ctx.Done():
 		t.Stop()
 		a.mu.Lock()
 		delete(a.pending, digest)
 		a.mu.Unlock()
-		return false, ctx.Err()
+		return Decision{}, ctx.Err()
 	case <-t.C:
 		a.mu.Lock()
 		delete(a.pending, digest)
 		a.mu.Unlock()
-		return a.onTimeout, nil
+		return Decision{Allow: a.onTimeout}, nil
 	}
 }
 
@@ -146,8 +146,9 @@ func (a *WebhookApprover) handlePending(w http.ResponseWriter, r *http.Request) 
 
 // decisionRequest is the JSON body for POST /approval/decision.
 type decisionRequest struct {
-	ID    string `json:"id"`
-	Allow bool   `json:"allow"`
+	ID     string `json:"id"`
+	Allow  bool   `json:"allow"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // handleDecision serves POST /approval/decision.
@@ -176,7 +177,7 @@ func (a *WebhookApprover) handleDecision(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	req.result <- dec.Allow // safe: buffered(1), receiver still alive
+	req.result <- Decision{Allow: dec.Allow, Reason: dec.Reason} // safe: buffered(1), receiver still alive
 	w.WriteHeader(http.StatusOK)
 }
 

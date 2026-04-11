@@ -69,9 +69,9 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	remoteIP := RemoteIPFromCtx(ctx)
 	digest := audit.CmdDigest(sess.ID(), command)
 	t.logger.LogApprovalRequested(remoteIP, sess.User(), host, sess.ID(), command, digest)
-	allowed, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command, digest)
-	if approvalErr != nil || !allowed {
-		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command, digest)
+	dec, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command, digest)
+	if approvalErr != nil || !dec.Allow {
+		t.logger.LogApprovalDenied(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason)
 		return errResult("command denied by user"), nil
 	}
 
@@ -85,7 +85,7 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult(execErr.Error()), nil
 	}
 
-	t.logger.LogApprovalApproved(remoteIP, sess.User(), host, sess.ID(), command, digest, exitCode, durationMs)
+	t.logger.LogApprovalApproved(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason, exitCode, durationMs)
 	t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, stdout, digest, exitCode, durationMs)
 
 	content := []mcp.Content{
