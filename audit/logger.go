@@ -60,14 +60,13 @@ func (l *Logger) LogApprovalRequested(remoteIP, user, host, sessionID, command, 
 	})
 }
 
-func (l *Logger) LogApprovalApproved(remoteIP, user, host, sessionID, command, digest, reason string, exitCode int, durationMs int64) {
+func (l *Logger) LogApprovalApproved(remoteIP, user, host, sessionID, command, digest, reason string) {
 	ts := now()
 	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: APPROVED %s\n", ts, remoteIP, user, host, sessionID, digest, command))
 	ev := map[string]any{
 		"_msg": fmt.Sprintf("%s@%s approval approved: `%s`", user, host, command),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
 		"event": "approval_approved", "command": command, "digest": digest,
-		"exit_code": exitCode, "duration_ms": durationMs,
 	}
 	if reason != "" {
 		ev["reason"] = reason

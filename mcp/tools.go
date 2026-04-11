@@ -75,6 +75,8 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult("command denied by user"), nil
 	}
 
+	t.logger.LogApprovalApproved(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason)
+
 	// Execute
 	start := time.Now()
 	stdout, exitCode, execErr := sess.Exec(command, time.Duration(timeoutSec)*time.Second)
@@ -85,7 +87,6 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		return errResult(execErr.Error()), nil
 	}
 
-	t.logger.LogApprovalApproved(remoteIP, sess.User(), host, sess.ID(), command, digest, dec.Reason, exitCode, durationMs)
 	t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, stdout, digest, exitCode, durationMs)
 
 	content := []mcp.Content{

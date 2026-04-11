@@ -75,7 +75,7 @@ func TestLogger_ApprovalCycle(t *testing.T) {
 
 func TestLogger_ApprovalApproved(t *testing.T) {
 	l, buf, _ := newTestLogger(t)
-	l.LogApprovalApproved("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", "deadbeef", "looks good", 0, 100)
+	l.LogApprovalApproved("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", "deadbeef", "looks good")
 
 	var ev map[string]any
 	json.NewDecoder(buf).Decode(&ev)
