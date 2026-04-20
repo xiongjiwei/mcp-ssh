@@ -8,12 +8,12 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
 	"github.com/xiongjiwei/mcp-ssh/daemon"
 	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (

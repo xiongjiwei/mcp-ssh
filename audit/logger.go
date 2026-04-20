@@ -70,9 +70,9 @@ func (l *Logger) LogApprovalDecision(remoteIP, user, host, sessionID, command, d
 		event = "approval_denied"
 		msg = "approval denied"
 	}
-	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: %s %s reason:%s\n", ts, remoteIP, user, host, sessionID, digest, outcome, command, reason))
+	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: %s %s [reason: %s]\n", ts, remoteIP, user, host, sessionID, digest, outcome, command, reason))
 	l.publishEvent(map[string]any{
-		"_msg": fmt.Sprintf("%s@%s %s: `%s` reason:%s", user, host, msg, command, reason),
+		"_msg": fmt.Sprintf("%s@%s %s: `%s`; reason: %s", user, host, msg, command, reason),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
 		"event": event, "command": command, "digest": digest, "reason": reason,
 	})
