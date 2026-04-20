@@ -10,8 +10,8 @@ import (
 )
 
 type Logger struct {
-	logWriter  io.Writer
-	eventSink  io.Writer
+	logWriter io.Writer
+	eventSink io.Writer
 }
 
 func New(logWriter io.Writer, jsonOut io.Writer) *Logger {
@@ -70,16 +70,12 @@ func (l *Logger) LogApprovalDecision(remoteIP, user, host, sessionID, command, d
 		event = "approval_denied"
 		msg = "approval denied"
 	}
-	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: %s %s\n", ts, remoteIP, user, host, sessionID, digest, outcome, command))
-	ev := map[string]any{
-		"_msg": fmt.Sprintf("%s@%s %s: `%s`", user, host, msg, command),
+	l.appendFile(fmt.Sprintf("%s [%s] [%s@%s] [session:%s] [digest:%s] APPROVAL: %s %s reason:%s\n", ts, remoteIP, user, host, sessionID, digest, outcome, command, reason))
+	l.publishEvent(map[string]any{
+		"_msg": fmt.Sprintf("%s@%s %s: `%s` reason:%s", user, host, msg, command, reason),
 		"time": ts, "remote_ip": remoteIP, "user": user, "host": host, "session": sessionID,
-		"event": event, "command": command, "digest": digest,
-	}
-	if reason != "" {
-		ev["reason"] = reason
-	}
-	l.publishEvent(ev)
+		"event": event, "command": command, "digest": digest, "reason": reason,
+	})
 }
 
 func (l *Logger) appendFile(line string) {
@@ -95,15 +91,10 @@ func now() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// CmdDigest returns a short (4-byte hex) digest that correlates audit log
+// CmdDigest returns a 16-byte (32 hex chars) digest that correlates audit log
 // entries for the same command: approval_requested, approval_approved/denied,
 // and exec all share the same digest.
 func CmdDigest(sessionID, command string) string {
-	ts := now()
-	return cmdDigest(sessionID, command, ts)
-}
-
-func cmdDigest(sessionID, command, ts string) string {
-	h := sha256.Sum256([]byte(sessionID + command + ts))
+	h := sha256.Sum256([]byte(sessionID + command + now()))
 	return fmt.Sprintf("%x", h[:16])
 }
