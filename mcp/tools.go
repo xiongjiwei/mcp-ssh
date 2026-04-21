@@ -71,7 +71,7 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	digest := audit.CmdDigest(sess.ID(), command)
 	dec, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command, digest)
 	if approvalErr != nil || !dec.Allow {
-		return errResult("command denied by user"), nil
+		return errResult("command denied by user: " + dec.Reason), nil
 	}
 
 	// Execute

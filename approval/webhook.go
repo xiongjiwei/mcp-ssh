@@ -70,7 +70,11 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 		a.mu.Lock()
 		delete(a.pending, digest)
 		a.mu.Unlock()
-		return Decision{Allow: a.onTimeout}, nil
+		reason := "approval timed out: auto-denied"
+		if a.onTimeout {
+			reason = "approval timed out: auto-allowed"
+		}
+		return Decision{Allow: a.onTimeout, Reason: reason}, nil
 	}
 }
 
