@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/xiongjiwei/mcp-ssh/audit"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
@@ -26,7 +27,7 @@ func newTestLogger(t *testing.T) (*audit.Logger, *bytes.Buffer, string) {
 
 func TestLogger_Exec(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogExec("1.2.3.4", "alice", "srv1", "s1", "ls /tmp", "file1\nfile2\n", "deadbeef", 0, 42)
+	l.LogExec("s1", session.Request{RemoteIP: "1.2.3.4", User: "alice", Host: "srv1", Command: "ls /tmp", Digest: "deadbeef"}, "file1\nfile2\n", 0, 42)
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "EXEC: ls /tmp") {
@@ -53,8 +54,8 @@ func TestLogger_Exec(t *testing.T) {
 
 func TestLogger_ApprovalCycle(t *testing.T) {
 	l, buf, logPath := newTestLogger(t)
-	l.LogApprovalRequested("1.2.3.4", "alice", "srv1", "s1", "rm -rf /", "deadbeef")
-	l.LogApprovalDecision("1.2.3.4", "alice", "srv1", "s1", "rm -rf /", "deadbeef", "", false)
+	l.LogApprovalRequested("s1", session.Request{RemoteIP: "1.2.3.4", User: "alice", Host: "srv1", Command: "rm -rf /", Digest: "deadbeef"})
+	l.LogApprovalDecision("s1", session.Request{RemoteIP: "1.2.3.4", User: "alice", Host: "srv1", Command: "rm -rf /", Digest: "deadbeef"}, "", false)
 
 	content, _ := os.ReadFile(logPath)
 	if !strings.Contains(string(content), "APPROVAL: DENIED") {
@@ -75,7 +76,7 @@ func TestLogger_ApprovalCycle(t *testing.T) {
 
 func TestLogger_ApprovalApproved(t *testing.T) {
 	l, buf, _ := newTestLogger(t)
-	l.LogApprovalDecision("1.2.3.4", "alice", "srv1", "s1", "deploy.sh", "deadbeef", "looks good", true)
+	l.LogApprovalDecision("s1", session.Request{RemoteIP: "1.2.3.4", User: "alice", Host: "srv1", Command: "deploy.sh", Digest: "deadbeef"}, "looks good", true)
 
 	var ev map[string]any
 	json.NewDecoder(buf).Decode(&ev)

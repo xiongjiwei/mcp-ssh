@@ -11,7 +11,7 @@ import (
 	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
-	"github.com/xiongjiwei/mcp-ssh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/session"
 	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -66,7 +66,7 @@ func initDeps(transport string) error {
 		return fmt.Errorf("mkdir: %w", err)
 	}
 
-	sm := daemon.NewSessionManager(cfg, "ssh")
+	sm := session.NewManager(cfg, "ssh")
 	logWriter := &lumberjack.Logger{
 		Filename: filepath.Join(dir, "audit.log"),
 		MaxSize:  cfg.Audit.MaxSizeMB,

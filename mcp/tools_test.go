@@ -10,7 +10,7 @@ import (
 	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
-	"github.com/xiongjiwei/mcp-ssh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/session"
 	mcpsrv "github.com/xiongjiwei/mcp-ssh/mcp"
 )
 
@@ -18,7 +18,7 @@ import (
 func newTestTools(t *testing.T) *mcpsrv.Tools {
 	t.Helper()
 	cfg := config.Default()
-	sm := daemon.NewSessionManager(cfg, "bash")
+	sm := session.NewManager(cfg, "bash")
 	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}), logger)
 	return mcpsrv.NewTools(sm, gate, logger, cfg, "stdio")
@@ -133,7 +133,7 @@ func firstText(result *mcp.CallToolResult) string {
 
 func TestTools_Isolation_AgentCannotSeeOtherSession(t *testing.T) {
 	cfg := config.Default()
-	sm := daemon.NewSessionManager(cfg, "bash")
+	sm := session.NewManager(cfg, "bash")
 	logger := audit.New(io.Discard, &bytes.Buffer{})
 	gate := approval.NewGate(cfg.Approval.Whitelist, approval.NewApprover(approval.Config{Provider: "auto_deny"}), logger)
 

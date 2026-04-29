@@ -1,21 +1,21 @@
-package daemon_test
+package session_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/xiongjiwei/mcp-ssh/config"
-	"github.com/xiongjiwei/mcp-ssh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
-func newTestSM(t *testing.T) *daemon.SessionManager {
+func newTestManager(t *testing.T) *session.Manager {
 	t.Helper()
 	cfg := config.Default()
-	return daemon.NewSessionManager(cfg, "bash")
+	return session.NewManager(cfg, "bash")
 }
 
 func TestSM_GetOrCreate_NewSession(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
 	s, err := sm.GetOrCreate("stdio", "", "")
@@ -28,7 +28,7 @@ func TestSM_GetOrCreate_NewSession(t *testing.T) {
 }
 
 func TestSM_GetOrCreate_Reuses(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
 	s1, _ := sm.GetOrCreate("stdio", "", "")
@@ -39,7 +39,7 @@ func TestSM_GetOrCreate_Reuses(t *testing.T) {
 }
 
 func TestSM_Close_RemovesSession(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	sm.GetOrCreate("stdio", "", "")
 	sm.Close("stdio", "")
 
@@ -50,7 +50,7 @@ func TestSM_Close_RemovesSession(t *testing.T) {
 }
 
 func TestSM_List(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
 	sm.GetOrCreate("stdio", "", "")
@@ -62,7 +62,7 @@ func TestSM_List(t *testing.T) {
 }
 
 func TestSM_IdleReap(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	s, _ := sm.GetOrCreate("stdio", "", "")
 	id := s.ID()
 
@@ -77,22 +77,19 @@ func TestSM_IdleReap(t *testing.T) {
 }
 
 func TestSM_Isolation_DifferentMCPSession(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
-	// Agent A opens a session on host ""
 	s1, err := sm.GetOrCreate("agent-a", "", "")
 	if err != nil {
 		t.Fatalf("agent-a GetOrCreate: %v", err)
 	}
 
-	// Agent B cannot see agent-a's session
 	got := sm.Get("agent-b", "")
 	if got != nil {
 		t.Error("agent-b should not see agent-a's session")
 	}
 
-	// Agent A can still see its own session
 	got = sm.Get("agent-a", "")
 	if got == nil {
 		t.Error("agent-a should see its own session")
@@ -103,7 +100,7 @@ func TestSM_Isolation_DifferentMCPSession(t *testing.T) {
 }
 
 func TestSM_Isolation_List(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
 	sm.GetOrCreate("agent-a", "", "")
@@ -121,16 +118,14 @@ func TestSM_Isolation_List(t *testing.T) {
 }
 
 func TestSM_Isolation_CloseDoesNotAffectOther(t *testing.T) {
-	sm := newTestSM(t)
+	sm := newTestManager(t)
 	defer sm.CloseAll()
 
 	sm.GetOrCreate("agent-a", "", "")
 	sm.GetOrCreate("agent-b", "", "")
 
-	// Agent A closes its session
 	sm.Close("agent-a", "")
 
-	// Agent B's session is unaffected
 	got := sm.Get("agent-b", "")
 	if got == nil {
 		t.Error("agent-b session should still exist after agent-a closes its session")

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 // Decision holds the outcome of an approval request.
@@ -17,8 +19,7 @@ type Approver interface {
 	// RequestApproval returns a Decision and nil on success, or a zero Decision
 	// and non-nil error on failure. Implementations must respect ctx.Done() and
 	// return promptly on cancellation.
-	// digest is the audit digest that correlates this request with its exec log entry.
-	RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (Decision, error)
+	RequestApproval(ctx context.Context, req session.Request) (Decision, error)
 }
 
 // WebhookConfig holds webhook-specific settings (mirrors config.WebhookConfig

@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/xiongjiwei/mcp-ssh/approval"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 func TestAutoDenyApprover_AlwaysDenies(t *testing.T) {
 	a := approval.NewApprover(approval.Config{Provider: "auto_deny"})
-	dec, err := a.RequestApproval(context.Background(), "user", "srv1", "", "rm -rf /", "")
+	dec, err := a.RequestApproval(context.Background(), session.Request{User: "user", Host: "srv1", Command: "rm -rf /"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -22,7 +23,7 @@ func TestAutoDenyApprover_RespectsContextCancellation(t *testing.T) {
 	a := approval.NewApprover(approval.Config{Provider: "auto_deny"})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := a.RequestApproval(ctx, "user", "srv1", "", "rm -rf /", "")
+	_, err := a.RequestApproval(ctx, session.Request{User: "user", Host: "srv1", Command: "rm -rf /"})
 	if err != nil {
 		t.Fatalf("AutoDenyApprover should not return ctx error: %v", err)
 	}
@@ -30,7 +31,7 @@ func TestAutoDenyApprover_RespectsContextCancellation(t *testing.T) {
 
 func TestNewApprover_UnknownProvider_FallsBackToAutoDeny(t *testing.T) {
 	a := approval.NewApprover(approval.Config{Provider: "unknown_provider"})
-	dec, _ := a.RequestApproval(context.Background(), "user", "h", "", "cmd", "")
+	dec, _ := a.RequestApproval(context.Background(), session.Request{User: "user", Host: "h", Command: "cmd"})
 	if dec.Allow {
 		t.Error("unknown provider should fall back to auto_deny")
 	}
@@ -38,7 +39,7 @@ func TestNewApprover_UnknownProvider_FallsBackToAutoDeny(t *testing.T) {
 
 func TestAutoAllowApprover_AlwaysAllows(t *testing.T) {
 	a := approval.NewApprover(approval.Config{Provider: "auto_allow"})
-	dec, err := a.RequestApproval(context.Background(), "user", "srv1", "", "rm -rf /", "")
+	dec, err := a.RequestApproval(context.Background(), session.Request{User: "user", Host: "srv1", Command: "rm -rf /"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/xiongjiwei/mcp-ssh/approval"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 func newWebhook(transport string, timeoutSec int, action string) *approval.WebhookApprover {
@@ -49,7 +50,7 @@ func TestWebhook_StdioWarningLogged(t *testing.T) {
 
 func TestWebhook_StdioFastPath_Deny(t *testing.T) {
 	wa := newWebhook("stdio", 300, "deny")
-	dec, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
+	dec, err := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", RemoteIP: "1.2.3.4", Command: "rm -rf /"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func TestWebhook_StdioFastPath_Deny(t *testing.T) {
 
 func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 	wa := newWebhook("stdio", 300, "allow")
-	dec, err := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "rm -rf /", "")
+	dec, err := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", RemoteIP: "1.2.3.4", Command: "rm -rf /"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestWebhook_StdioFastPath_Allow(t *testing.T) {
 func TestWebhook_Timeout_Deny(t *testing.T) {
 	wa := newWebhook("serve", 1, "deny")
 	start := time.Now()
-	dec, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
+	dec, err := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", Command: "cmd", Digest: "abc123"})
 	elapsed := time.Since(start)
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +90,7 @@ func TestWebhook_Timeout_Deny(t *testing.T) {
 
 func TestWebhook_Timeout_Allow(t *testing.T) {
 	wa := newWebhook("serve", 1, "allow")
-	dec, err := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "abc123")
+	dec, err := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", Command: "cmd", Digest: "abc123"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +107,7 @@ func TestWebhook_CtxCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		dec, err := wa.RequestApproval(ctx, "u", "h", "", "cmd", "ctxtest")
+		dec, err := wa.RequestApproval(ctx, session.Request{User: "u", Host: "h", Command: "cmd", Digest: "ctxtest"})
 		if err == nil {
 			t.Errorf("expected ctx error, got nil (allow=%v)", dec.Allow)
 		}
@@ -134,7 +135,7 @@ func TestWebhook_DecisionAllow(t *testing.T) {
 
 	result := make(chan approval.Decision, 1)
 	go func() {
-		dec, _ := wa.RequestApproval(context.Background(), "u", "h", "1.2.3.4", "cmd", "deadbeef")
+		dec, _ := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", RemoteIP: "1.2.3.4", Command: "cmd", Digest: "deadbeef"})
 		result <- dec
 	}()
 
@@ -197,7 +198,7 @@ func TestWebhook_DecisionDeny(t *testing.T) {
 
 	result := make(chan approval.Decision, 1)
 	go func() {
-		dec, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", "denytest")
+		dec, _ := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", Command: "cmd", Digest: "denytest"})
 		result <- dec
 	}()
 
@@ -288,7 +289,7 @@ func TestWebhook_Pending_ImmediateWhenRequestExists(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
 
-	go wa.RequestApproval(context.Background(), "u", "h", "ip", "cmd", "dg1") //nolint
+	go wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", RemoteIP: "ip", Command: "cmd", Digest: "dg1"}) //nolint
 	time.Sleep(20 * time.Millisecond)
 
 	resp, _ := http.Get(srv.URL + "/approval/pending")
@@ -331,7 +332,7 @@ func TestWebhook_Concurrent(t *testing.T) {
 	for i := 0; i < n; i++ {
 		i := i
 		go func() {
-			dec, _ := wa.RequestApproval(context.Background(), "u", "h", "", "cmd", fmt.Sprintf("dg%d", i))
+			dec, _ := wa.RequestApproval(context.Background(), session.Request{User: "u", Host: "h", Command: "cmd", Digest: fmt.Sprintf("dg%d", i)})
 			results <- dec
 		}()
 	}

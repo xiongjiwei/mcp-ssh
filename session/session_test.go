@@ -1,4 +1,4 @@
-package daemon_test
+package session_test
 
 import (
 	"os/exec"
@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xiongjiwei/mcp-ssh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/session"
 	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
-func newTestSession(t *testing.T) *daemon.Session {
+func newTestSession(t *testing.T) *session.Session {
 	t.Helper()
 	if _, err := exec.LookPath("bash"); err != nil {
 		t.Skip("bash not available")
@@ -19,7 +19,7 @@ func newTestSession(t *testing.T) *daemon.Session {
 	if err != nil {
 		t.Fatalf("connector: %v", err)
 	}
-	return daemon.NewSession("testuser", "testhost", "test-id", conn, 1048576)
+	return session.NewSession("testuser", "testhost", "test-id", conn, 1048576)
 }
 
 func TestSession_SimpleExec(t *testing.T) {

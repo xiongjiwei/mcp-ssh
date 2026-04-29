@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 // pendingRequest holds an in-flight approval request waiting for an external decision.
@@ -15,6 +17,7 @@ type pendingRequest struct {
 	Host     string
 	RemoteIP string
 	Command  string
+	Cwd      string
 	result   chan Decision // buffered(1); written exactly once
 }
 
@@ -32,24 +35,25 @@ type WebhookApprover struct {
 
 // RequestApproval blocks until an external decision arrives, the context is
 // cancelled, or the timeout elapses.
-func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remoteIP, command, digest string) (Decision, error) {
+func (a *WebhookApprover) RequestApproval(ctx context.Context, req session.Request) (Decision, error) {
 	// stdio fast-path: no HTTP server, return configured timeout action immediately.
 	if a.transport == "stdio" {
 		return Decision{Allow: a.onTimeout}, nil
 	}
 
-	req := &pendingRequest{
-		ID:       digest,
-		User:     user,
-		Host:     host,
-		RemoteIP: remoteIP,
-		Command:  command,
+	pr := &pendingRequest{
+		ID:       req.Digest,
+		User:     req.User,
+		Host:     req.Host,
+		RemoteIP: req.RemoteIP,
+		Command:  req.Command,
+		Cwd:      req.Cwd,
 		result:   make(chan Decision, 1),
 	}
 
 	// Register and broadcast under the same lock so long-poll waiters never miss it.
 	a.mu.Lock()
-	a.pending[digest] = req
+	a.pending[pr.ID] = pr
 	old := a.notify
 	a.notify = make(chan struct{})
 	a.mu.Unlock()
@@ -57,18 +61,18 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, user, host, remot
 
 	t := time.NewTimer(a.timeout)
 	select {
-	case d := <-req.result:
+	case d := <-pr.result:
 		t.Stop()
 		return d, nil
 	case <-ctx.Done():
 		t.Stop()
 		a.mu.Lock()
-		delete(a.pending, digest)
+		delete(a.pending, pr.ID)
 		a.mu.Unlock()
 		return Decision{}, ctx.Err()
 	case <-t.C:
 		a.mu.Lock()
-		delete(a.pending, digest)
+		delete(a.pending, pr.ID)
 		a.mu.Unlock()
 		reason := "approval timed out: auto-denied"
 		if a.onTimeout {
@@ -94,6 +98,7 @@ type pendingItem struct {
 	Host     string `json:"host"`
 	RemoteIP string `json:"remote_ip"`
 	Command  string `json:"command"`
+	Cwd      string `json:"cwd,omitempty"`
 }
 
 // pendingResponse is the top-level JSON envelope.
@@ -111,6 +116,7 @@ func (a *WebhookApprover) snapshot() []pendingItem {
 			Host:     r.Host,
 			RemoteIP: r.RemoteIP,
 			Command:  r.Command,
+			Cwd:      r.Cwd,
 		})
 	}
 	return items

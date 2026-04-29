@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/xiongjiwei/mcp-ssh/audit"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 // Gate checks commands against a whitelist, then calls the Approver
@@ -27,15 +28,15 @@ func NewGate(whitelist []string, approver Approver, logger *audit.Logger) *Gate 
 // Check returns (Decision, nil) on success, (zero Decision, err) on approver failure.
 // Whitelisted commands return Decision{Allow: true} without logging or calling the approver.
 // Non-whitelisted commands are logged (requested → approved/denied) around the approver call.
-func (g *Gate) Check(ctx context.Context, user, host, remoteIP, sessionID, command, digest string) (Decision, error) {
-	if g.isWhitelisted(command) {
+func (g *Gate) Check(ctx context.Context, sessionID string, req session.Request) (Decision, error) {
+	if g.isWhitelisted(req.Command) {
 		return Decision{Allow: true}, nil
 	}
 
-	g.logger.LogApprovalRequested(remoteIP, user, host, sessionID, command, digest)
+	g.logger.LogApprovalRequested(sessionID, req)
 
-	dec, err := g.approver.RequestApproval(ctx, user, host, remoteIP, command, digest)
-	g.logger.LogApprovalDecision(remoteIP, user, host, sessionID, command, digest, dec.Reason, dec.Allow && err == nil)
+	dec, err := g.approver.RequestApproval(ctx, req)
+	g.logger.LogApprovalDecision(sessionID, req, dec.Reason, dec.Allow && err == nil)
 	return dec, err
 }
 

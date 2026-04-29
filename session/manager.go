@@ -1,4 +1,4 @@
-package daemon
+package session
 
 import (
 	"crypto/rand"
@@ -11,8 +11,8 @@ import (
 	mcpssh "github.com/xiongjiwei/mcp-ssh/ssh"
 )
 
-// SessionInfo is a snapshot of a session for status reporting.
-type SessionInfo struct {
+// Info is a snapshot of a session for status reporting.
+type Info struct {
 	User        string
 	Host        string
 	SessionID   string
@@ -20,15 +20,15 @@ type SessionInfo struct {
 	State       string
 }
 
-type SessionManager struct {
+type Manager struct {
 	mu       sync.Mutex
 	sessions map[string]*Session // key: mcpSessionID:host
 	cfg      *config.Config
 	sshBin   string
 }
 
-func NewSessionManager(cfg *config.Config, sshBin string) *SessionManager {
-	sm := &SessionManager{
+func NewManager(cfg *config.Config, sshBin string) *Manager {
+	sm := &Manager{
 		sessions: make(map[string]*Session),
 		cfg:      cfg,
 		sshBin:   sshBin,
@@ -51,7 +51,7 @@ func newID() string {
 
 // GetOrCreate returns the existing valid session for (mcpSessionID, host),
 // or opens a new one.
-func (sm *SessionManager) GetOrCreate(mcpSessionID, user, host string) (*Session, error) {
+func (sm *Manager) GetOrCreate(mcpSessionID, user, host string) (*Session, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
@@ -73,14 +73,14 @@ func (sm *SessionManager) GetOrCreate(mcpSessionID, user, host string) (*Session
 }
 
 // Get returns the existing session for (mcpSessionID, host), or nil if none exists.
-func (sm *SessionManager) Get(mcpSessionID, host string) *Session {
+func (sm *Manager) Get(mcpSessionID, host string) *Session {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	return sm.sessions[sessionKey(mcpSessionID, host)]
 }
 
 // Close closes and removes the session for (mcpSessionID, host).
-func (sm *SessionManager) Close(mcpSessionID, host string) {
+func (sm *Manager) Close(mcpSessionID, host string) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	key := sessionKey(mcpSessionID, host)
@@ -91,7 +91,7 @@ func (sm *SessionManager) Close(mcpSessionID, host string) {
 }
 
 // CloseAll closes all sessions (used on shutdown).
-func (sm *SessionManager) CloseAll() {
+func (sm *Manager) CloseAll() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	for key, s := range sm.sessions {
@@ -101,11 +101,11 @@ func (sm *SessionManager) CloseAll() {
 }
 
 // List returns a snapshot of sessions belonging to mcpSessionID.
-func (sm *SessionManager) List(mcpSessionID string) []SessionInfo {
+func (sm *Manager) List(mcpSessionID string) []Info {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	prefix := mcpSessionID + ":"
-	result := make([]SessionInfo, 0)
+	result := make([]Info, 0)
 	for key, s := range sm.sessions {
 		if len(key) < len(prefix) || key[:len(prefix)] != prefix {
 			continue
@@ -116,7 +116,7 @@ func (sm *SessionManager) List(mcpSessionID string) []SessionInfo {
 		} else if s.IsExecuting() {
 			state = "executing"
 		}
-		result = append(result, SessionInfo{
+		result = append(result, Info{
 			User:        s.User(),
 			Host:        s.Host(),
 			SessionID:   s.ID(),
@@ -128,13 +128,13 @@ func (sm *SessionManager) List(mcpSessionID string) []SessionInfo {
 }
 
 // Reap closes sessions that have exceeded the idle timeout.
-func (sm *SessionManager) Reap() {
+func (sm *Manager) Reap() {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	sm.reap()
 }
 
-func (sm *SessionManager) reap() {
+func (sm *Manager) reap() {
 	timeout := time.Duration(sm.cfg.Session.IdleTimeoutMinutes) * time.Minute
 	now := time.Now()
 	for key, s := range sm.sessions {
@@ -145,7 +145,7 @@ func (sm *SessionManager) reap() {
 	}
 }
 
-func (sm *SessionManager) reapLoop() {
+func (sm *Manager) reapLoop() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {

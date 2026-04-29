@@ -10,12 +10,12 @@ import (
 	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
 	"github.com/xiongjiwei/mcp-ssh/config"
-	"github.com/xiongjiwei/mcp-ssh/daemon"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 // Tools holds the dependencies shared by all tool handlers.
 type Tools struct {
-	sm             *daemon.SessionManager
+	sm             *session.Manager
 	gate           *approval.Gate
 	logger         *audit.Logger
 	cfg            *config.Config
@@ -25,7 +25,7 @@ type Tools struct {
 // NewTools constructs Tools. stdioSessionID is used when no MCP session ID is
 // present in the context (stdio mode). Pass "stdio" for stdio mode, "" for
 // serve mode (the context always carries the ID in serve mode).
-func NewTools(sm *daemon.SessionManager, gate *approval.Gate, logger *audit.Logger, cfg *config.Config, stdioSessionID string) *Tools {
+func NewTools(sm *session.Manager, gate *approval.Gate, logger *audit.Logger, cfg *config.Config, stdioSessionID string) *Tools {
 	return &Tools{sm: sm, gate: gate, logger: logger, cfg: cfg, stdioSessionID: stdioSessionID}
 }
 
@@ -69,7 +69,22 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	// Approval check
 	remoteIP := RemoteIPFromCtx(ctx)
 	digest := audit.CmdDigest(sess.ID(), command)
-	dec, approvalErr := t.gate.Check(ctx, sess.User(), host, remoteIP, sess.ID(), command, digest)
+
+	cwd, _, cwdErr := sess.Exec("pwd", time.Duration(timeoutSec)*time.Second)
+	if cwdErr != nil {
+		cwd = ""
+	}
+	cwd = strings.TrimSpace(cwd)
+
+	execReq := session.Request{
+		User:     sess.User(),
+		Host:     host,
+		RemoteIP: remoteIP,
+		Command:  command,
+		Cwd:      cwd,
+		Digest:   digest,
+	}
+	dec, approvalErr := t.gate.Check(ctx, sess.ID(), execReq)
 	if approvalErr != nil || !dec.Allow {
 		return errResult("command denied by user: " + dec.Reason), nil
 	}
@@ -80,11 +95,11 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	durationMs := time.Since(start).Milliseconds()
 
 	if execErr != nil {
-		t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, "", digest, 1, durationMs)
+		t.logger.LogExec(sess.ID(), execReq, "", 1, durationMs)
 		return errResult(execErr.Error()), nil
 	}
 
-	t.logger.LogExec(remoteIP, sess.User(), host, sess.ID(), command, stdout, digest, exitCode, durationMs)
+	t.logger.LogExec(sess.ID(), execReq, stdout, exitCode, durationMs)
 
 	content := []mcp.Content{
 		mcp.TextContent{Type: "text", Text: stdout},

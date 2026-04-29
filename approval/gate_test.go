@@ -7,6 +7,7 @@ import (
 
 	"github.com/xiongjiwei/mcp-ssh/approval"
 	"github.com/xiongjiwei/mcp-ssh/audit"
+	"github.com/xiongjiwei/mcp-ssh/session"
 )
 
 func gate(whitelist []string) *approval.Gate {
@@ -16,7 +17,7 @@ func gate(whitelist []string) *approval.Gate {
 
 func TestGate_Whitelisted_NoApprovalNeeded(t *testing.T) {
 	g := gate([]string{"ls", "grep", "cat"})
-	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls -la /etc", "")
+	dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: "ls -la /etc"})
 	if err != nil || !dec.Allow {
 		t.Errorf("whitelisted command should pass: ok=%v err=%v", dec.Allow, err)
 	}
@@ -24,7 +25,7 @@ func TestGate_Whitelisted_NoApprovalNeeded(t *testing.T) {
 
 func TestGate_PathNormalized(t *testing.T) {
 	g := gate([]string{"ls"})
-	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "/bin/ls -la", "")
+	dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: "/bin/ls -la"})
 	if err != nil || !dec.Allow {
 		t.Errorf("/bin/ls should normalize to ls: ok=%v err=%v", dec.Allow, err)
 	}
@@ -32,7 +33,7 @@ func TestGate_PathNormalized(t *testing.T) {
 
 func TestGate_NotWhitelisted_AutoDeny(t *testing.T) {
 	g := gate([]string{"ls"})
-	dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", "rm -rf /data", "")
+	dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: "rm -rf /data"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -43,7 +44,7 @@ func TestGate_NotWhitelisted_AutoDeny(t *testing.T) {
 
 func TestGate_CompoundAllWhitelisted(t *testing.T) {
 	g := gate([]string{"ls", "grep"})
-	dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp | grep foo", "")
+	dec, _ := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: "ls /tmp | grep foo"})
 	if !dec.Allow {
 		t.Error("both tokens whitelisted, should pass")
 	}
@@ -51,7 +52,7 @@ func TestGate_CompoundAllWhitelisted(t *testing.T) {
 
 func TestGate_CompoundOneNotWhitelisted(t *testing.T) {
 	g := gate([]string{"ls"})
-	dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", "ls /tmp && rm -rf /", "")
+	dec, _ := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: "ls /tmp && rm -rf /"})
 	if dec.Allow {
 		t.Error("rm not whitelisted, should deny")
 	}
@@ -65,7 +66,7 @@ func TestGate_AmbiguousPattern_Deny(t *testing.T) {
 		"{ ls; echo done; }",
 	}
 	for _, c := range cases {
-		dec, _ := g.Check(context.Background(), "alice", "srv1", "", "s1", c, "")
+		dec, _ := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: c})
 		if dec.Allow {
 			t.Errorf("ambiguous command should require approval (denied by auto_deny): %q", c)
 		}
@@ -114,7 +115,7 @@ func TestGate_DefaultWhitelist(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -149,7 +150,7 @@ func TestGate_QuotedCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -191,7 +192,7 @@ func TestGate_CompoundCommands(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -231,7 +232,7 @@ func TestGate_EdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -263,7 +264,7 @@ func TestGate_AmbiguousPatterns(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -298,7 +299,7 @@ func TestGate_ComplexShellConstructs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.command, func(t *testing.T) {
-			dec, err := g.Check(context.Background(), "alice", "srv1", "", "s1", tt.command, "")
+			dec, err := g.Check(context.Background(), "s1", session.Request{User: "alice", Host: "srv1", RemoteIP: "", Command: tt.command})
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
