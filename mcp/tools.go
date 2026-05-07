@@ -48,14 +48,10 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	if err != nil {
 		return errResult("command parameter required"), nil
 	}
-
+	description, _ := req.RequireString("description")
 	timeoutSec := t.cfg.Session.CommandTimeoutSeconds
-	if args := req.GetArguments(); args != nil {
-		if v, ok := args["timeout"]; ok {
-			if n, ok := v.(float64); ok && n > 0 {
-				timeoutSec = int(n)
-			}
-		}
+	if n, err := req.RequireInt("timeout"); err == nil && n > 0 {
+		timeoutSec = n
 	}
 
 	mcpSessID := t.mcpSessionID(ctx)
@@ -77,12 +73,13 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 	cwd = strings.TrimSpace(cwd)
 
 	execReq := session.Request{
-		User:     sess.User(),
-		Host:     host,
-		RemoteIP: remoteIP,
-		Command:  command,
-		Cwd:      cwd,
-		Digest:   digest,
+		User:        sess.User(),
+		Host:        host,
+		RemoteIP:    remoteIP,
+		Command:     command,
+		Description: description,
+		Cwd:         cwd,
+		Digest:      digest,
 	}
 	dec, approvalErr := t.gate.Check(ctx, sess.ID(), execReq)
 	if approvalErr != nil || !dec.Allow {

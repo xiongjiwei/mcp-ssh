@@ -46,7 +46,7 @@ In serve mode the server listens at `:7408` by default and registers the MCP han
 | Tool | Description |
 |------|-------------|
 | `open` | Open a persistent SSH session to a host. Params: `host`, `user`. |
-| `exec` | Run a command on an open session. Params: `host`, `command`, `timeout` (optional). Returns stdout + exit code. Shell state (cd, export) persists between calls. For non-whitelisted commands, the current working directory is queried from the remote session before approval so the approver sees the verified `cwd`. |
+| `exec` | Run a command on an open session. Params: `host`, `command`, `description` (optional), `timeout` (optional). Returns stdout + exit code. Shell state (cd, export) persists between calls. `description` is a brief human-readable summary of the command's intent — shown to approvers and recorded in the audit log. For non-whitelisted commands, the current working directory is queried from the remote session before approval so the approver sees the verified `cwd`. |
 | `close` | Close the SSH session for a host and release resources. |
 | `status` | List all active sessions with idle time and state. |
 
@@ -113,6 +113,7 @@ When `provider = "webhook"`, mcp-ssh exposes two HTTP endpoints on the same port
       "host": "prod-server",
       "remote_ip": "192.168.1.10",
       "command": "rm -rf /tmp/foo",
+      "description": "clean up temp build artifacts",
       "cwd": "/home/root"
     }
   ]
@@ -190,7 +191,7 @@ All events (session open/close, exec, approval requested/approved/denied) are wr
 
 1. **`~/.mcp-ssh/audit.log`** — human-readable, rotated by size and age. Each entry includes a `digest` (16 bytes / 32 hex chars of SHA-256 over session+command+timestamp) that correlates the `approval_requested`, decision, and `exec` entries for the same command.
 
-2. **VictoriaLogs** — when `victoria_logs_url` is set, structured JSON events are shipped asynchronously. Each event includes `_msg`, `user`, `host`, `remote_ip`, `session`, `command`, `digest`, `cwd`, `exit_code`, `duration_ms`.
+2. **VictoriaLogs** — when `victoria_logs_url` is set, structured JSON events are shipped asynchronously. Each event includes `_msg`, `user`, `host`, `remote_ip`, `session`, `command`, `description`, `digest`, `cwd`, `exit_code`, `duration_ms`.
 
 ## Claude Code Integration
 
