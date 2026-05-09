@@ -12,13 +12,14 @@ import (
 
 // pendingRequest holds an in-flight approval request waiting for an external decision.
 type pendingRequest struct {
-	ID       string
-	User     string
-	Host     string
-	RemoteIP string
-	Command  string
-	Cwd      string
-	result   chan Decision // buffered(1); written exactly once
+	ID          string
+	User        string
+	Host        string
+	RemoteIP    string
+	Command     string
+	Description string
+	Cwd         string
+	result      chan Decision // buffered(1); written exactly once
 }
 
 // WebhookApprover implements Approver via HTTP long polling.
@@ -42,13 +43,14 @@ func (a *WebhookApprover) RequestApproval(ctx context.Context, req session.Reque
 	}
 
 	pr := &pendingRequest{
-		ID:       req.Digest,
-		User:     req.User,
-		Host:     req.Host,
-		RemoteIP: req.RemoteIP,
-		Command:  req.Command,
-		Cwd:      req.Cwd,
-		result:   make(chan Decision, 1),
+		ID:          req.Digest,
+		User:        req.User,
+		Host:        req.Host,
+		RemoteIP:    req.RemoteIP,
+		Command:     req.Command,
+		Description: req.Description,
+		Cwd:         req.Cwd,
+		result:      make(chan Decision, 1),
 	}
 
 	// Register and broadcast under the same lock so long-poll waiters never miss it.
@@ -93,12 +95,13 @@ func (a *WebhookApprover) RegisterHandlers(mux *http.ServeMux) {
 // ID doubles as the audit digest — use it to correlate with audit log entries
 // and as the key for POST /approval/decision.
 type pendingItem struct {
-	ID       string `json:"id"`
-	User     string `json:"user"`
-	Host     string `json:"host"`
-	RemoteIP string `json:"remote_ip"`
-	Command  string `json:"command"`
-	Cwd      string `json:"cwd,omitempty"`
+	ID          string `json:"id"`
+	User        string `json:"user"`
+	Host        string `json:"host"`
+	RemoteIP    string `json:"remote_ip"`
+	Command     string `json:"command"`
+	Description string `json:"description,omitempty"`
+	Cwd         string `json:"cwd,omitempty"`
 }
 
 // pendingResponse is the top-level JSON envelope.
@@ -111,12 +114,13 @@ func (a *WebhookApprover) snapshot() []pendingItem {
 	items := make([]pendingItem, 0, len(a.pending))
 	for _, r := range a.pending {
 		items = append(items, pendingItem{
-			ID:       r.ID,
-			User:     r.User,
-			Host:     r.Host,
-			RemoteIP: r.RemoteIP,
-			Command:  r.Command,
-			Cwd:      r.Cwd,
+			ID:          r.ID,
+			User:        r.User,
+			Host:        r.Host,
+			RemoteIP:    r.RemoteIP,
+			Command:     r.Command,
+			Description: r.Description,
+			Cwd:         r.Cwd,
 		})
 	}
 	return items
