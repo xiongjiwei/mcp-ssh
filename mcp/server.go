@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"fmt"
+
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
@@ -13,7 +15,7 @@ func NewServer(tools *Tools) *server.MCPServer {
 
 	s.AddTool(
 		mcp.NewTool("exec",
-			mcp.WithDescription("Execute a shell command on a remote host. The session must be opened first with `open`. Commands run in the same persistent shell — cd, export, and other state changes persist across calls. Stderr is merged into stdout. Commands not on the approved whitelist will go through an approval flow before execution."),
+			mcp.WithDescription(fmt.Sprintf("Execute a shell command on a remote host. The session must be opened first with `open`. Commands run in the same persistent shell — cd, export, and other state changes persist across calls. Stderr is merged into stdout. Commands not on the approved whitelist will go through an approval flow before execution; approval may block up to %ds (server-configured timeout).", tools.cfg.Approval.Webhook.TimeoutSeconds)),
 			mcp.WithString("host", mcp.Required(), mcp.Description("Remote host (must match an open session)")),
 			mcp.WithString("command", mcp.Required(), mcp.Description("Shell command to execute")),
 			mcp.WithString("description", mcp.Description("Brief description of what this command is intended to do (shown to approvers and recorded in the audit log)")),

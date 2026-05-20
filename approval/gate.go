@@ -36,7 +36,11 @@ func (g *Gate) Check(ctx context.Context, sessionID string, req session.Request)
 	g.logger.LogApprovalRequested(sessionID, req)
 
 	dec, err := g.approver.RequestApproval(ctx, req)
-	g.logger.LogApprovalDecision(sessionID, req, dec.Reason, dec.Allow && err == nil)
+	reason := dec.Reason
+	if err != nil && reason == "" {
+		reason = err.Error()
+	}
+	g.logger.LogApprovalDecision(sessionID, req, reason, dec.Allow && err == nil)
 	return dec, err
 }
 

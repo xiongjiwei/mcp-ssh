@@ -82,8 +82,11 @@ func (t *Tools) HandleExec(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 		Digest:      digest,
 	}
 	dec, approvalErr := t.gate.Check(ctx, sess.ID(), execReq)
-	if approvalErr != nil || !dec.Allow {
-		return errResult("command denied by user: " + dec.Reason), nil
+	if approvalErr != nil {
+		return nil, approvalErr
+	}
+	if !dec.Allow {
+		return errResult("command denied: " + dec.Reason), nil
 	}
 
 	// Execute
